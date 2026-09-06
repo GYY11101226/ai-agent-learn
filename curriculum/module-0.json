@@ -1,0 +1,64 @@
+{
+  "id": "module-0",
+  "title": "预备：建立心智模型",
+  "weeks": "第1周",
+  "prerequisites": "懂基础 Python 即可",
+  "chapters": [
+    {
+      "id": "0.1",
+      "title": "什么是 Agent",
+      "goal": "能说清 Agent = LLM + 工具 + 循环 + 记忆，并区分它与 chatbot / workflow / RAG",
+      "concepts": [
+        {"name": "Agent 定义", "detail": "把一个只会聊天的大模型，加上能做事的手（工具）、能自己决定下一步的大脑（循环）、和跨会话记住的东西（记忆）。"},
+        {"name": "四类系统对比", "detail": "Chatbot 一问一答不调工具；Workflow 步骤由代码写死；RAG 是检索→生成两步；Agent 会自己决定下一步直到目标达成。"},
+        {"name": "生活化类比", "detail": "Chatbot 是只会答话的接线员，Workflow 是机械臂，Agent 是能自己打电话、查资料、协调多部门、最后给你结论的助理。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "用一句话向不写代码的同事解释 Agent 和 chatbot 的区别。",
+      "quiz_topics": ["Agent 四大部件", "Agent 与 RAG / workflow 的边界"]
+    },
+    {
+      "id": "0.2",
+      "title": "LLM 基础速通",
+      "goal": "理解 token、消息角色、关键参数，知道为什么 API 是无状态的",
+      "concepts": [
+        {"name": "Token", "detail": "模型读写的最小单位，按 token 计费；一个汉字约 1-2 token。"},
+        {"name": "三个消息角色", "detail": "system（设定行为）、user（输入）、assistant（回复）；多轮对话 = 历史全量重发，API 无状态。"},
+        {"name": "关键参数", "detail": "max_tokens（回复上限）、temperature（随机性）、tools（可用工具）、stop_reason（为何停）。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "估算「你好，世界」这四个字大约消耗多少个 token。",
+      "quiz_topics": ["token 概念", "消息角色", "stop_reason 含义"]
+    },
+    {
+      "id": "0.3",
+      "title": "环境搭建与第一个调用",
+      "goal": "装好 anthropic SDK，跑通第一个 messages.create，会用环境变量管理密钥",
+      "concepts": [
+        {"name": "安装与密钥", "detail": "pip install anthropic；密钥走 ANTHROPIC_API_KEY 环境变量，绝不硬编码进代码。"},
+        {"name": "最小调用", "detail": "client.messages.create(model, max_tokens, messages) 返回内容在 response.content 里。"},
+        {"name": "截断观察", "detail": "调小 max_tokens 后，stop_reason 会变成 max_tokens——这正是模块5要解决的护栏问题。"}
+      ],
+      "code": "import anthropic\nclient = anthropic.Anthropic()\nresp = client.messages.create(model='claude-opus-5', max_tokens=1024,\n    messages=[{'role':'user','content':'用一句话解释 token'}])\nprint(resp.content[0].text)",
+      "todo": "把示例跑通，然后把 max_tokens 改成 32 再跑一次，观察 stop_reason 变成什么值。",
+      "exercise": "跑通第一个调用，并确认密钥没有写死在代码里。",
+      "quiz_topics": ["SDK 初始化", "messages.create 参数", "密钥管理"]
+    },
+    {
+      "id": "0.4",
+      "title": "能力成熟度 L0-L4",
+      "goal": "记住 L0-L4 五层成熟度，能判断一个系统处于哪一层",
+      "concepts": [
+        {"name": "L0-L4 定义", "detail": "L0 单次调用；L1 单 Agent + 循环；L2 规划+反思；L3 上下文工程（记忆/RAG）；L4 生产级 Harness。"},
+        {"name": "本课程对照", "detail": "模块2到 L1、模块4到 L2、模块3到 L3、模块5到 L4。"},
+        {"name": "正交提醒", "detail": "L3 和 L4 正交——有记忆的 Agent 未必能上生产。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "判断：一个能查天气且会自我纠错的单 Agent，处于哪一层？",
+      "quiz_topics": ["L0-L4 各层定义", "成熟度判断"]
+    }
+  ]
+}

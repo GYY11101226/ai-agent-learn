@@ -1,0 +1,91 @@
+{
+  "id": "module-5",
+  "title": "Harness 生产化",
+  "weeks": "第11-14周",
+  "prerequisites": "模块4 Agent Engineering",
+  "chapters": [
+    {
+      "id": "5.1",
+      "title": "评估体系 Evals",
+      "goal": "能量化「Agent 到底好不好」，会造三层评估集",
+      "concepts": [
+        {"name": "三层评估", "detail": "单步（单次调用对不对）、轨迹（多步是否合理）、端到端（最终是否达标）。"},
+        {"name": "回归", "detail": "每次改完跑一遍评测集做回归，用正常/边界/异常三类输入。"},
+        {"name": "来源", "detail": "这是 1.4 prompt 评测的系统化。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "为你的文档问答 Agent 造一个含 5 条（正常/边界/异常各若干）的评测集。",
+      "quiz_topics": ["三层评估", "回归测试", "评测集设计"]
+    },
+    {
+      "id": "5.2",
+      "title": "可观测性",
+      "goal": "用日志/追踪/指标看见 Agent 内部发生了什么",
+      "concepts": [
+        {"name": "三件套", "detail": "logging 记每轮 model→tool→result；tracing 串成链路定位卡点；metrics 记成功率/轮数/耗时。"},
+        {"name": "最低要求", "detail": "给 run_agent 加结构化日志，记每轮用什么工具、耗时多久。"}
+      ],
+      "code": "",
+      "todo": "给 run_agent 加结构化日志，记录每轮的 stop_reason 和工具名。",
+      "exercise": "列出你想看的 3 个生产指标及它们能发现什么问题。",
+      "quiz_topics": ["logging/tracing/metrics 区别", "关键指标"]
+    },
+    {
+      "id": "5.3",
+      "title": "可靠性与护栏",
+      "goal": "出错不崩、能兜底、有输入输出护栏",
+      "concepts": [
+        {"name": "重试与退避", "detail": "限流/5xx 用指数退避重试，SDK max_retries 已内置部分。"},
+        {"name": "降级", "detail": "主模型挂切备选，工具超时给默认值。"},
+        {"name": "护栏 guardrails", "detail": "输入过一道检查（注入/敏感/越权），输出过一道检查（有害/格式）。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "设计一个「输入护栏」的检查清单（至少 4 项）。",
+      "quiz_topics": ["重试退避", "降级策略", "输入输出护栏"]
+    },
+    {
+      "id": "5.4",
+      "title": "成本与性能",
+      "goal": "同样的能力花更少的钱和时间",
+      "concepts": [
+        {"name": "模型路由", "detail": "简单任务用便宜模型（haiku），难的才上 Opus。"},
+        {"name": "Prompt 缓存", "detail": "缓存稳定前缀（system/tools），重复请求便宜一个量级。"},
+        {"name": "先量后剪", "detail": "用 metrics 找出烧钱大户是哪个环节再优化。"}
+      ],
+      "code": "",
+      "todo": "把 quiz 出题这类简单任务切换到便宜模型，对比成本和效果。",
+      "exercise": "估算：用 Opus 还是 Haiku 跑 1000 次分类，成本差多少？",
+      "quiz_topics": ["模型路由", "prompt 缓存", "成本优化顺序"]
+    },
+    {
+      "id": "5.5",
+      "title": "部署与运维",
+      "goal": "从本机脚本到能给人用的服务",
+      "concepts": [
+        {"name": "服务化", "detail": "把 run_agent 包成 FastAPI 端点，配环境变量、健康检查。"},
+        {"name": "配置隔离", "detail": "密钥走环境/密钥管理，绝不进仓库。"},
+        {"name": "CI 回归", "detail": "在 CI 里跑 Evals 回归，逐步演进。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "列出把你当前的 Agent 服务化需要做的最少 3 件事。",
+      "quiz_topics": ["服务化步骤", "配置隔离", "CI 回归"]
+    },
+    {
+      "id": "5.6",
+      "title": "安全与治理",
+      "goal": "防注入、防越权、可审计",
+      "concepts": [
+        {"name": "Prompt 注入", "detail": "用户输入夹带「忽略之前指令」，对策：隔离用户内容与系统指令、校验工具参数来源。"},
+        {"name": "越权", "detail": "Agent 能碰的资源按用户权限最小化，不因模型要求就执行敏感操作。"},
+        {"name": "审计", "detail": "危险操作留痕可追溯。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "构造一个 prompt 注入例子，并说明你的 Agent 如何防住它。",
+      "quiz_topics": ["prompt 注入", "越权防护", "审计留痕"]
+    }
+  ]
+}

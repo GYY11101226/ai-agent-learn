@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>课程大纲</h1>
+<p class="muted">按模块递进学习：先看讲义，再做测验。</p>
+
+{% for m in modules %}
+<div class="module">
+  <h2>{{ m.title }} <span class="muted">· {{ m.weeks }}</span></h2>
+  <div>
+  {% for ch in m.chapters %}
+    {% set p = progress.get(ch.id) %}
+    <div class="chapter">
+      <a href="/lesson/{{ ch.id }}">{{ ch.id }} · {{ ch.title }}</a>
+      {% if p and p.mastery >= 80 %}<span class="badge done">已掌握 {{ p.mastery }}%</span>
+      {% elif p and p.mastery > 0 %}<span class="badge mid">{{ p.mastery }}%</span>
+      {% else %}<span class="badge">{{ p.mastery if p else 0 }}% 未开始</span>{% endif %}
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

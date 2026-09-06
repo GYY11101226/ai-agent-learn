@@ -1,0 +1,63 @@
+{
+  "id": "module-2",
+  "title": "工具调用 Function Calling",
+  "weeks": "第4-5周",
+  "prerequisites": "模块1 Prompt Engineering",
+  "chapters": [
+    {
+      "id": "2.1",
+      "title": "为什么 LLM 需要工具",
+      "goal": "理解工具调用解决的问题，说清模型在工具调用中的真实角色",
+      "concepts": [
+        {"name": "模型的局限", "detail": "知识有截止、不能执行、不能查实时数据——工具给它「手」。"},
+        {"name": "意图 vs 执行", "detail": "模型只输出「调用哪个工具、传什么参数」这个意图，你的代码才真正执行。"},
+        {"name": "类比", "detail": "模型是大脑只说「帮我查天气」，工具调用是递电话的手，大脑说号码手去拨。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "列一个「不靠工具就做不了」的任务，并说明为什么。",
+      "quiz_topics": ["工具调用解决什么问题", "模型在其中的角色"]
+    },
+    {
+      "id": "2.2",
+      "title": "工具 schema 设计",
+      "goal": "写好 name / description / input_schema，让模型知道怎么用工具",
+      "concepts": [
+        {"name": "description 是写给人(模型)看的说明", "detail": "说清什么场景用、参数什么意思、返回什么，写差了模型就用错。"},
+        {"name": "input_schema 是参数契约", "detail": "类型、枚举、必填；可选 strict: True 强制精确校验。"}
+      ],
+      "code": "tools = [{\n  'name':'get_weather',\n  'description':'查询指定城市的当前天气。',\n  'input_schema':{'type':'object',\n    'properties':{'location':{'type':'string','description':'城市名'},\n      'unit':{'type':'string','enum':['celsius','fahrenheit']}},\n    'required':['location']}}]",
+      "todo": "给 get_weather 的 input_schema 加一个 required 字段，并说明为什么必填。",
+      "exercise": "设计一个 search_web(query) 工具的 schema，参数含 query 和 max_results。",
+      "quiz_topics": ["schema 三字段", "description 的写作要点", "strict 校验"]
+    },
+    {
+      "id": "2.3",
+      "title": "手写 Agent 循环",
+      "goal": "从零写出 调用→决定工具→执行→喂回→直到完成 的循环",
+      "concepts": [
+        {"name": "stop_reason 是循环开关", "detail": "tool_use=模型想用工具继续循环；end_turn=完成退出。"},
+        {"name": "tool_use 块", "detail": "藏 name（哪个工具）和 input（参数），execute_tool 据此执行。"},
+        {"name": "tool_result 回填", "detail": "必须带对的 tool_use_id 塞回消息列表，这是告诉模型结果的唯一方式。"}
+      ],
+      "code": "def run_agent(user_input, tools):\n    messages = [{'role':'user','content':user_input}]\n    while True:\n        resp = client.messages.create(model=MODEL, max_tokens=4096, tools=tools, messages=messages)\n        if resp.stop_reason == 'end_turn':\n            return next(b.text for b in resp.content if b.type=='text')\n        messages.append({'role':'assistant','content':resp.content})\n        results = []\n        for block in resp.content:\n            if block.type == 'tool_use':\n                results.append({'type':'tool_result','tool_use_id':block.id,'content':execute_tool(block.name, block.input)})\n        messages.append({'role':'user','content':results})",
+      "todo": "给 execute_tool 再加一个工具，让 Agent 连续调用两次，观察循环跑了几圈。",
+      "exercise": "手写一个带两个工具的 run_agent，并打印每一轮的 stop_reason。",
+      "quiz_topics": ["agentic loop 流程", "stop_reason 判断", "tool_result 回填"]
+    },
+    {
+      "id": "2.4",
+      "title": "工具错误处理",
+      "goal": "工具失败时 Agent 不崩、能自纠，并防死循环",
+      "concepts": [
+        {"name": "is_error 标记", "detail": "工具失败返回 is_error=True 而非 throw，模型会解释或换参数重试。"},
+        {"name": "防死循环", "detail": "给循环加最大轮数上限，超了强制结束并报告。"},
+        {"name": "解析安全", "detail": "永远用 json.loads 解析工具入参，不用字符串匹配。"}
+      ],
+      "code": "results.append({'type':'tool_result','tool_use_id':block.id,\n    'content':'未找到该城市，请提供有效城市名','is_error':True})",
+      "todo": "给 run_agent 加 20 轮上限，超限时返回明确错误提示。",
+      "exercise": "模拟一个「工具必失败」场景，验证 is_error 能让模型自己纠正。",
+      "quiz_topics": ["is_error 作用", "死循环防护", "解析安全"]
+    }
+  ]
+}

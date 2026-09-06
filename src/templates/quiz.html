@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ chapter.title }} · 测验{% endblock %}
+{% block content %}
+<h1>测验 · {{ chapter.id }} {{ chapter.title }}</h1>
+
+<form method="post" action="/quiz/{{ chapter.id }}/submit">
+  <input type="hidden" name="questions_json" value="{{ questions_json }}">
+  <input type="hidden" name="review" value="{{ review }}">
+
+  {% set letters = ['A', 'B', 'C', 'D', 'E', 'F'] %}
+  {% for q in questions %}
+  {% set qi = loop.index0 %}{# Jinja2 的 loop 无 parent 属性，先存外层序号再进内层循环 #}
+  <div class="q">
+    <div class="stem">{{ loop.index }}. {{ q.stem }} <span class="muted">(单选)</span></div>
+    {% if q.type == 'choice' and q.options %}
+      {% for opt in q.options %}
+      <label><input type="radio" name="answer_{{ qi }}" value="{{ letters[loop.index0] }}"> {{ letters[loop.index0] }}. {{ opt }}</label>
+      {% endfor %}
+    {% else %}
+      <textarea name="answer_{{ qi }}" rows="3" placeholder="写下你的答案..."></textarea>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <button class="btn" type="submit">提交批改</button>
+</form>
+{% endblock %}

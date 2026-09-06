@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ chapter.title }} · 学习{% endblock %}
+{% block content %}
+<h1>{{ chapter.id }} · {{ chapter.title }}</h1>
+<p class="muted">本节目标：{{ chapter.goal }}</p>
+
+<div class="block">
+  <h3>📚 核心结论</h3>
+  <p style="white-space: pre-line">{{ lesson.conclusion }}</p>
+</div>
+
+<div class="block">
+  <h3>🔍 详细展开</h3>
+  <p style="white-space: pre-line">{{ lesson.explanation }}</p>
+</div>
+
+<div class="block">
+  <h3>💡 类比理解</h3>
+  <p style="white-space: pre-line">{{ lesson.analogy }}</p>
+</div>
+
+<div class="block">
+  <h3>✏️ 动手实践</h3>
+  <p style="white-space: pre-line">{{ lesson.practice }}</p>
+</div>
+
+{% if chapter.code %}
+<div class="block">
+  <h3>💻 关键代码</h3>
+  <pre class="code">{{ chapter.code }}</pre>
+</div>
+{% endif %}
+
+{% if chapter.todo %}
+<div class="block">
+  <h3>🙋 协作点（TODO 人工）</h3>
+  <p style="white-space: pre-line">{{ chapter.todo }}</p>
+</div>
+{% endif %}
+
+<div style="display: flex; gap: 12px;">
+  <form method="post" action="/lesson/{{ chapter.id }}/done">
+    <button class="btn" type="submit">标记已学完 → 去测验</button>
+  </form>
+  <a class="btn secondary" href="/">返回课程</a>
+</div>
+{% endblock %}

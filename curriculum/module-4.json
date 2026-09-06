@@ -1,0 +1,64 @@
+{
+  "id": "module-4",
+  "title": "Agent Engineering",
+  "weeks": "第8-10周",
+  "prerequisites": "模块3 Context Engineering",
+  "chapters": [
+    {
+      "id": "4.1",
+      "title": "Agent 范式演进",
+      "goal": "掌握 ReAct / Plan-and-Execute / ReWOO / Reflexion 四种范式及适用场景",
+      "concepts": [
+        {"name": "ReAct", "detail": "边想边做，交替输出思考+行动，最通用，模块2的循环就是其骨架。"},
+        {"name": "Plan-and-Execute", "detail": "先列完整计划再逐步执行，适合可预先拆解的任务。"},
+        {"name": "ReWOO 与 Reflexion", "detail": "ReWOO 解耦计划与执行省 token；Reflexion 执行后自我批评带教训重试。"}
+      ],
+      "code": "",
+      "todo": "把手里的 ReAct Agent 改造成 Plan-and-Execute，观察失败率下降多少。",
+      "exercise": "对比四种范式各自适合什么任务，画一张表。",
+      "quiz_topics": ["四种范式区别", "适用场景选择"]
+    },
+    {
+      "id": "4.2",
+      "title": "规划与反思",
+      "goal": "实现任务分解与 Critic 自评，输出通过/需修改/重试判断",
+      "concepts": [
+        {"name": "规划", "detail": "复杂任务先拆子任务逐个击破，每步可验证。"},
+        {"name": "反思 Critic", "detail": "模型执行后问自己「结果对不对」，输出通过/需修改/重试。"},
+        {"name": "自愈循环", "detail": "执行→检查→不达标就带错误原因重试，是 Harness 的强约束+自愈法则之一。"}
+      ],
+      "code": "",
+      "todo": "给 run_agent 加一个 Critic 步骤，让它执行后自我评分。",
+      "exercise": "设计一个「三步任务」，写出它的规划分解。",
+      "quiz_topics": ["规划分解", "Critic 判断", "自愈循环"]
+    },
+    {
+      "id": "4.3",
+      "title": "多智能体协作",
+      "goal": "掌握 Planner-Executor-Critic 与 Orchestrator-Worker 等协作模式",
+      "concepts": [
+        {"name": "经典模式", "detail": "Planner→Executor→Critic 分离；Orchestrator→Worker 分发子任务；辩论多视角取稳。"},
+        {"name": "独立上下文", "detail": "每个 Agent 跑在独立上下文，互不干扰。"},
+        {"name": "何时才上多智能体", "detail": "任务真能并行或需独立审查才用，简单任务上多智能体只是烧钱。"}
+      ],
+      "code": "",
+      "todo": "把 run_agent 拆成 Planner / Executor 两个函数，各用不同 system prompt。",
+      "exercise": "判断：一个「抓数据→写报告」的任务，该用单智能体还是多智能体？为什么？",
+      "quiz_topics": ["协作模式", "独立上下文", "多智能体适用条件"]
+    },
+    {
+      "id": "4.4",
+      "title": "工具系统与安全",
+      "goal": "用白名单、权限、审计给工具加安全边界",
+      "concepts": [
+        {"name": "白名单", "detail": "允许调用的操作列成清单，清单外一律拒绝。"},
+        {"name": "危险操作拦截", "detail": "删文件、发网络请求、执行命令需确认或审计日志。"},
+        {"name": "最小权限原则", "detail": "永远假设模型可能被注入操纵，把能动做的动作收紧到最小。"}
+      ],
+      "code": "",
+      "todo": "实现一个 whitelist.json + 校验函数，拦截清单外的工具调用。",
+      "exercise": "列出 Agent 工具系统里最危险的三类操作及对策。",
+      "quiz_topics": ["白名单机制", "危险操作拦截", "最小权限"]
+    }
+  ]
+}

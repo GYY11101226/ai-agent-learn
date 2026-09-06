@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}学习进度{% endblock %}
+{% block content %}
+<h1>学习进度</h1>
+<p>总掌握度：<strong>{{ overall }}%</strong></p>
+<div class="progress-bar"><div class="progress-fill" style="width: {{ overall }}%"></div></div>
+
+<table>
+  <tr><th>章节</th><th>掌握度</th><th>下次复习</th></tr>
+  {% for ch in chapters %}
+  <tr>
+    <td>{{ ch.id }} · {{ ch.title }}</td>
+    <td>{{ ch.mastery }}%</td>
+    <td>{{ ch.next_review or '—' }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}测验结果{% endblock %}
+{% block content %}
+<h1>测验结果</h1>
+<p>本轮平均掌握度：<strong>{{ avg }}%</strong></p>
+
+{% for q, g, a in results %}
+<div class="result-row">
+  <div class="stem">{{ loop.index }}. {{ q.stem }}</div>
+  <div class="verdict {{ 'ok' if g.correct else 'bad' }}">
+    {{ '✓ 正确' if g.correct else '✗ 有误' }} — {{ g.score }} 分
+  </div>
+  <div>你的作答：<span style="white-space: pre-line">{{ a or '（未作答）' }}</span></div>
+  <div class="correct-ans">参考答案：{{ q.answer }}</div>
+  <div class="correct-ans" style="white-space: pre-line">解析：{{ q.explanation }}</div>
+  {% if g.feedback %}<div class="correct-ans" style="white-space: pre-line">点评：{{ g.feedback }}</div>{% endif %}
+</div>
+{% endfor %}
+
+<div style="display: flex; gap: 12px;">
+  <a class="btn" href="/progress">查看进度</a>
+  <a class="btn secondary" href="/">返回课程</a>
+</div>
+{% endblock %}
