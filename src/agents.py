@@ -64,7 +64,7 @@ class QuizGrade(BaseModel):
 
 # ---------- 三套角色提示词 ----------
 
-TUTOR_SYSTEM = """你是一个 AI Agent 课程的讲师（Tutor），面向零基础初学者，用中文讲授。
+TUTOR_SYSTEM = """你是一个在线学习平台的讲师（Tutor），面向零基础初学者，用中文讲授。
 
 讲授要求：
 1. 先给一句话核心结论，再展开。
@@ -75,7 +75,7 @@ TUTOR_SYSTEM = """你是一个 AI Agent 课程的讲师（Tutor），面向零�
 6. 章节若有 TODO(人工) 协作点，引导学习者自己动手，讲思路而非直接给答案。
 7. 不要照抄讲义的原文，要用自己的话把概念讲透。"""
 
-GRADER_SYSTEM = """你是一个评分员（Grader），负责为 AI Agent 课程章节出测验题并批改。
+GRADER_SYSTEM = """你是一个评分员（Grader），负责为课程章节出测验题并批改。
 
 出题要求（只出四选一单选题）：
 1. 每题恰好 4 个选项：options 数组 4 项，纯选项文本，不带 "A." 之类前缀。
@@ -94,6 +94,16 @@ DRILL_SYSTEM = """你是一个训练师（Drill），按遗忘曲线为已学章
 1. 每题恰好 4 个选项：options 数组 4 项，纯选项文本，不带字母前缀；answer 填正确选项字母（"A"/"B"/"C"/"D"）。
 2. 题目重点放在学习者薄弱环节和易遗忘的核心概念上。
 3. 用中文出题，代码/术语用英文；答案准确，解析讲清「为什么」。"""
+
+
+def course_brief(course: dict | None) -> str:
+    """把课程标题/简介拼进提示上下文，让角色与被讲课程对齐。"""
+    if not course:
+        return ""
+    parts = [f"当前课程：{course.get('title', '')}"]
+    if course.get("description"):
+        parts.append(course["description"])
+    return "，".join(parts)
 
 
 # ---------- 调用封装 ----------
@@ -221,26 +231,32 @@ def _ask_openai_compatible(system, user, output_model, max_tokens):
 
 # ---------- 四个功能 ----------
 
-def teach(chapter: dict) -> Lesson:
+def teach(chapter: dict, course: dict | None = None) -> Lesson:
     from .curriculum import chapter_text
-    user = f"请讲授以下章节，严格按要求的四段结构输出：\n\n{chapter_text(chapter)}"
+    brief = course_brief(course)
+    header = f"{brief}\n\n" if brief else ""
+    user = f"{header}请讲授以下章节，严格按要求的四段结构输出：\n\n{chapter_text(chapter)}"
     return _ask(TUTOR_SYSTEM, user, output_model=Lesson, max_tokens=16000)
 
 
-def make_quiz(chapter: dict, count: int = 20) -> Quiz:
+def make_quiz(chapter: dict, count: int = 20, course: dict | None = None) -> Quiz:
     from .curriculum import chapter_text
+    brief = course_brief(course)
+    header = f"{brief}\n\n" if brief else ""
     user = (
-        f"请针对以下章节出 {count} 道四选一单选题，覆盖核心概念与关键代码，难度由浅入深：\n\n"
+        f"{header}请针对以下章节出 {count} 道四选一单选题，覆盖核心概念与关键代码，难度由浅入深：\n\n"
         f"{chapter_text(chapter)}"
     )
     return _ask(GRADER_SYSTEM, user, output_model=Quiz, max_tokens=16000)
 
 
-def make_review(chapter: dict, weak_points: list[str] | None = None, count: int = 10) -> Quiz:
+def make_review(chapter: dict, weak_points: list[str] | None = None, count: int = 10, course: dict | None = None) -> Quiz:
     from .curriculum import chapter_text
+    brief = course_brief(course)
+    header = f"{brief}\n\n" if brief else ""
     weak = "、".join(weak_points) if weak_points else "无（按核心概念全面复习）"
     user = (
-        f"请为一章生成 {count} 道四选一单选复习题，重点针对薄弱环节：{weak}\n\n"
+        f"{header}请为一章生成 {count} 道四选一单选复习题，重点针对薄弱环节：{weak}\n\n"
         f"{chapter_text(chapter)}"
     )
     return _ask(DRILL_SYSTEM, user, output_model=Quiz, max_tokens=16000)

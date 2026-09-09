@@ -1,0 +1,64 @@
+{
+  "id": "module-3",
+  "title": "数据库与持久化",
+  "weeks": "第6-7周",
+  "prerequisites": "完成模块 2",
+  "chapters": [
+    {
+      "id": "3.1",
+      "title": "SQLAlchemy 模型与建表",
+      "goal": "会定义 ORM 模型、创建 engine 与建表，理解 Session 是什么",
+      "concepts": [
+        {"name": "ORM 映射", "detail": "Python 类对应表、类属性对应列；declarative_base() 是所有模型的基类起点。"},
+        {"name": "Engine 与连接", "detail": "create_engine(url) 管理连接池；SQLAlchemy 2.x 的经典用法是同步的，异步另有方案。"},
+        {"name": "Session", "detail": "一次会话 = 一个工作单元：add 暂存、commit 落库、rollback 撤销，用完必须关闭。"}
+      ],
+      "code": "from sqlalchemy import create_engine\nfrom sqlalchemy.orm import declarative_base, sessionmaker\n\nengine = create_engine('sqlite:///./app.db', connect_args={'check_same_thread': False})\nBase = declarative_base()\nSessionLocal = sessionmaker(bind=engine)",
+      "todo": "",
+      "exercise": "定义 Course/Chapter 两张一对多的表，并调用 Base.metadata.create_all 建表。",
+      "quiz_topics": ["ORM 对应关系", "Session 生命周期", "commit 与 rollback"]
+    },
+    {
+      "id": "3.2",
+      "title": "依赖注入管理会话：CRUD 核心",
+      "goal": "会用 yield 依赖封装 get_db，在路由里完成完整 CRUD",
+      "concepts": [
+        {"name": "yield 依赖", "detail": "def get_db(): yield session——路由执行完自动关闭会话，出异常自动回滚，资源不泄漏。"},
+        {"name": "CRUD 惯例", "detail": "增 add+commit+refresh；查 get/filter；改 先查后改再 commit；删 delete+commit。"},
+        {"name": "404 惯例", "detail": "查不到主动 raise HTTPException(404)，别让 None 往下流传变成 500。"}
+      ],
+      "code": "def get_db():\n    db = SessionLocal()\n    try:\n        yield db\n    finally:\n        db.close()\n\n@app.delete('/items/{item_id}', status_code=204)\ndef delete_item(item_id: int, db: Session = Depends(get_db)):\n    item = db.get(Item, item_id)\n    if not item:\n        raise HTTPException(404, 'not found')\n    db.delete(item)\n    db.commit()",
+      "todo": "亲手写一个 delete 接口：注释掉 db.commit() 再删一次，观察接口返回成功但数据库没变。",
+      "exercise": "给「课程」资源写完整 CRUD 五个接口（列表/详情/创建/更新/删除）。",
+      "quiz_topics": ["yield 依赖原理", "CRUD 步骤", "404 处理惯例"]
+    },
+    {
+      "id": "3.3",
+      "title": "异步数据库",
+      "goal": "理解 async engine 与异步 Session 的写法，能判断何时值得用异步",
+      "concepts": [
+        {"name": "异步驱动", "detail": "create_async_engine + async with AsyncSession；SQLite 配 aiosqlite，Postgres 配 asyncpg。"},
+        {"name": "何时值得", "detail": "大量并发请求各自等数据库时异步收益明显；小工具同步方案更简单直接。"},
+        {"name": "await 全链路", "detail": "异步 session 的每个查询都要 await，漏写会拿到协程对象而不是结果——典型症状是打印出 coroutine。"}
+      ],
+      "code": "from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker\n\nengine = create_async_engine('sqlite+aiosqlite:///./app.db')\nAsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)\n\nasync def get_db():\n    async with AsyncSessionLocal() as session:\n        yield session\n# 路由里：items = (await db.execute(select(Item))).scalars().all()",
+      "todo": "",
+      "exercise": "把 3.2 的列表查询接口改写成异步版本并对比代码差异。",
+      "quiz_topics": ["async engine", "同步/异步取舍", "漏 await 的症状"]
+    },
+    {
+      "id": "3.4",
+      "title": "迁移：Alembic 流程",
+      "goal": "知道为什么需要迁移，能走通 init → revision → upgrade 流程",
+      "concepts": [
+        {"name": "为什么迁移", "detail": "create_all 只建新表不改旧表；迁移 = 可版本化、可回滚的表结构变更脚本。"},
+        {"name": "核心三步", "detail": "alembic init 初始化 → revision --autogenerate 生成变更 → upgrade head 应用；downgrade 回退。"},
+        {"name": "版本即状态", "detail": "数据库里的 alembic_version 表记录当前版本，多人协作靠迁移文件对齐结构。"}
+      ],
+      "code": "alembic init migrations\nalembic revision --autogenerate -m 'add column'\nalembic upgrade head\nalembic downgrade -1",
+      "todo": "",
+      "exercise": "给已有表加一列，生成迁移并应用，再用 downgrade 回退验证可撤销。",
+      "quiz_topics": ["create_all 的局限", "revision/upgrade", "迁移协作"]
+    }
+  ]
+}

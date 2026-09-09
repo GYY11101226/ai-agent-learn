@@ -1,0 +1,78 @@
+{
+  "id": "module-5",
+  "title": "测试与生产化",
+  "weeks": "第11-14周",
+  "prerequisites": "完成模块 4",
+  "chapters": [
+    {
+      "id": "5.1",
+      "title": "测试：TestClient + pytest",
+      "goal": "会用 TestClient 写接口测试，会用依赖覆盖隔离数据库",
+      "concepts": [
+        {"name": "TestClient", "detail": "不起真实服务、进程内直接调 app；配合 pytest，一个函数就是一条用例。"},
+        {"name": "依赖覆盖", "detail": "app.dependency_overrides[get_db] = get_test_db——测试永不触碰真实数据。"},
+        {"name": "fixture 分层", "detail": "一个 app fixture + 一个 db fixture，用例只关心「发什么请求、断言什么结果」。"}
+      ],
+      "code": "from fastapi.testclient import TestClient\n\nclient = TestClient(app)\n\ndef test_get_item_404():\n    assert client.get('/items/999').status_code == 404\n\ndef test_create_item():\n    r = client.post('/items', json={'name': 'x', 'price': 1.5})\n    assert r.status_code == 201",
+      "todo": "给 3.2 写的 CRUD 接口补 5 条测试，必须覆盖 404 和校验失败分支。",
+      "exercise": "用 pytest 写一条「缺字段返回 422」的用例并断言错误结构。",
+      "quiz_topics": ["TestClient 原理", "依赖覆盖", "fixture 组织"]
+    },
+    {
+      "id": "5.2",
+      "title": "项目结构与 APIRouter",
+      "goal": "会拆分多文件路由，形成 routers/schemas/models 的可维护结构",
+      "concepts": [
+        {"name": "APIRouter", "detail": "每个资源一个 router（prefix + tags），main.py 里 include_router 组装成应用。"},
+        {"name": "目录分层", "detail": "models（ORM）/ schemas（Pydantic）/ routers（路由）/ core（配置）各司其职——本平台 frontend/api 分层是同理。"},
+        {"name": "tags 与文档", "detail": "tags 让 /docs 按资源分组展示，prefix 消除路径手写重复。"}
+      ],
+      "code": "router = APIRouter(prefix='/courses', tags=['courses'])\n\n@router.get('/')\ndef list_courses(): ...\n\n# main.py 里组装\napp.include_router(courses.router)\napp.include_router(users.router)",
+      "todo": "",
+      "exercise": "把一个单文件应用拆成 users/courses 两个 router 并保证 /docs 正常。",
+      "quiz_topics": ["APIRouter 组装", "目录分层", "tags 的作用"]
+    },
+    {
+      "id": "5.3",
+      "title": "日志与可观测性",
+      "goal": "会配分级日志与请求级观测，知道该盯哪些核心指标",
+      "concepts": [
+        {"name": "日志分级", "detail": "DEBUG 开发排查 / INFO 关键路径 / WARNING 可疑 / ERROR 失败；生产环境别用 print。"},
+        {"name": "请求级观测", "detail": "每条请求记 method/path/状态码/耗时/request_id，出问题时才能把一次请求串起来查。"},
+        {"name": "核心指标", "detail": "延迟、错误率、吞吐（QPS）三件套；本平台 /progress 纯读库不花 token，就是「便宜的观测」设计。"}
+      ],
+      "code": "import logging, time, uuid\nlogger = logging.getLogger('uvicorn')\n\n@app.middleware('http')\nasync def log_requests(request, call_next):\n    rid = str(uuid.uuid4())[:8]\n    start = time.perf_counter()\n    resp = await call_next(request)\n    logger.info('%s %s %s %.1fms %s', rid, request.method,\n                resp.status_code, (time.perf_counter() - start) * 1000, request.url.path)\n    return resp",
+      "todo": "",
+      "exercise": "给请求日志加 request_id（uuid4），并在一条请求的日志里贯穿它。",
+      "quiz_topics": ["日志分级", "请求日志字段", "核心指标三件套"]
+    },
+    {
+      "id": "5.4",
+      "title": "部署：Docker 与多 worker",
+      "goal": "会写 Dockerfile、会用 gunicorn+uvicorn worker 跑多进程，理解 --reload 只属开发",
+      "concepts": [
+        {"name": "部署形态", "detail": "gunicorn -k uvicorn.workers.UvicornWorker -w 4 多进程榨满多核；--reload 绝不能进生产。"},
+        {"name": "Dockerfile 要点", "detail": "slim 基础镜像；依赖层单独 COPY requirements.txt 先装（利用构建缓存）；用非 root 用户运行。"},
+        {"name": "配置注入", "detail": "镜像里不带 .env，运行时用 -e 或 compose 注入环境变量——一份镜像跑多环境。"}
+      ],
+      "code": "FROM python:3.12-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nUSER nobody\nCMD gunicorn src.main:app -k uvicorn.workers.UvicornWorker -w 4",
+      "todo": "",
+      "exercise": "写出两阶段 Dockerfile，本地 docker run 起服务并用 curl 验证健康。",
+      "quiz_topics": ["多 worker 原理", "Dockerfile 分层缓存", "环境变量注入"]
+    },
+    {
+      "id": "5.5",
+      "title": "安全加固与上线清单",
+      "goal": "掌握上线前 checklist：密钥、CORS、限流、备份、HTTPS",
+      "concepts": [
+        {"name": "密钥与开关", "detail": "密钥只进环境变量；生产按需关闭调试与文档（如 docs_url=None），减少攻击面。"},
+        {"name": "CORS 与限流", "detail": "CORSMiddleware 用白名单放行可信来源；对外接口加限流防刷。"},
+        {"name": "数据与回滚", "detail": "SQLite 小规模够用但要定期备份文件；上线前确认迁移已应用、出问题能回滚。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "给自己的项目写一份不少于 8 项的上线 checklist，并逐项验证打勾。",
+      "quiz_topics": ["生产环境关闭项", "CORS 白名单", "备份与回滚"]
+    }
+  ]
+}

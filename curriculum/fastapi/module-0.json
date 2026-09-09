@@ -1,0 +1,64 @@
+{
+  "id": "module-0",
+  "title": "预备：Web 框架心智模型",
+  "weeks": "第1周",
+  "prerequisites": "懂基础 Python 即可，HTTP 概念课内补",
+  "chapters": [
+    {
+      "id": "0.1",
+      "title": "什么是 Web 框架：从 HTTP 说起",
+      "goal": "能说清「HTTP 请求 → 路由匹配 → 处理函数 → 响应」的完整链路，以及框架帮你做了什么",
+      "concepts": [
+        {"name": "HTTP 请求与响应", "detail": "客户端发请求（方法 + 路径 + 数据），服务端回响应（状态码 + 数据）；HTTP 无状态，每次请求相互独立。"},
+        {"name": "路由的本质", "detail": "一张「URL 模式 + HTTP 方法 → 处理函数」的映射表；框架收到请求后查表分发到你的函数。"},
+        {"name": "框架的价值", "detail": "把 socket、HTTP 报文解析、分发这些脏活包掉，你只写「这个路径该干什么」的业务函数。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "用一句话向不写代码的同事解释：没有框架时，处理一个 HTTP 请求要手动做哪些事。",
+      "quiz_topics": ["HTTP 请求/响应模型", "路由的本质", "框架的职责边界"]
+    },
+    {
+      "id": "0.2",
+      "title": "为什么是 FastAPI",
+      "goal": "能从类型系统、异步、自动文档三个角度说清 FastAPI 与 Flask/Django 的差异",
+      "concepts": [
+        {"name": "类型即契约", "detail": "参数和模型用 Python 类型标注声明，FastAPI 据此自动校验、转换并生成文档——声明一次，三处受益。"},
+        {"name": "原生异步", "detail": "基于 ASGI（Starlette），async 路由在高并发 IO 场景吞吐显著高于同步 WSGI 框架。"},
+        {"name": "自动文档", "detail": "/docs（Swagger UI）与 /redoc 由 OpenAPI schema 生成，代码即文档，省掉手写维护接口文档。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "打开本平台后端 http://127.0.0.1:8000/docs，找出 3 个由代码自动生成的文档元素。",
+      "quiz_topics": ["FastAPI vs Flask/Django", "ASGI 与 WSGI 区别", "自动文档的来源"]
+    },
+    {
+      "id": "0.3",
+      "title": "环境搭建与第一个应用",
+      "goal": "独立完成 安装 fastapi + uvicorn → 写最小应用 → 启动 → 打开 /docs 的全流程",
+      "concepts": [
+        {"name": "安装与启动", "detail": "pip install fastapi uvicorn[standard]；uvicorn main:app --reload 启动，--reload 改代码自动重启。"},
+        {"name": "装饰器路由", "detail": "@app.get('/path') 把函数注册为 GET 处理器；函数返回值自动序列化为 JSON。"},
+        {"name": "交互式文档", "detail": "/docs 页面可以直接填参数发请求调试，是开发期最快的手工测试工具。"}
+      ],
+      "code": "from fastapi import FastAPI\napp = FastAPI()\n\n@app.get('/')\ndef hello():\n    return {'message': 'Hello, FastAPI'}\n# 启动：uvicorn main:app --reload，然后打开 /docs",
+      "todo": "跑通第一个应用后，把 --reload 去掉再改一次代码，观察行为差异。",
+      "exercise": "写一个返回 {'ping': 'pong'} 的 /ping 接口，并在 /docs 页面里调用它。",
+      "quiz_topics": ["uvicorn 与 --reload", "装饰器路由", "/docs 的作用"]
+    },
+    {
+      "id": "0.4",
+      "title": "异步速通：async/await 与事件循环",
+      "goal": "理解事件循环和协程，知道什么时候用 async def、什么时候用普通 def",
+      "concepts": [
+        {"name": "事件循环", "detail": "单线程调度器，遇到 await 就切去执行别的任务；适合 IO 密集（等网络/磁盘），不适合 CPU 密集。"},
+        {"name": "async def 路由", "detail": "路由函数可声明为 async def，内部 await 异步操作时不会阻塞整个服务。"},
+        {"name": "普通 def 的反差", "detail": "在 async 函数里调用同步阻塞（requests、time.sleep）会卡死事件循环；普通 def 路由反而会被丢进线程池，安全。"}
+      ],
+      "code": "@app.get('/slow')\nasync def slow():\n    await asyncio.sleep(1)   # 让出事件循环，不卡其它请求\n    return {'ok': True}\n# 反例：async 路由里写 time.sleep(1) 会卡住整个服务",
+      "todo": "",
+      "exercise": "判断：一个要等数据库 3 秒的接口，「async def + 同步驱动」和「普通 def」各会发生什么？",
+      "quiz_topics": ["事件循环", "await 的语义", "async def 与 def 的选择"]
+    }
+  ]
+}

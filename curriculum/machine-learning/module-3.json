@@ -1,0 +1,64 @@
+{
+  "id": "module-3",
+  "title": "无监督学习与工程",
+  "weeks": "第6-7周",
+  "prerequisites": "模块 2：监督学习·分类",
+  "chapters": [
+    {
+      "id": "3.1",
+      "title": "KMeans 聚类",
+      "goal": "手写 KMeans，理解质心与收敛",
+      "concepts": [
+        {"name": "KMeans 流程", "detail": "随机撒 k 个质心 → 每个点划给最近的质心 → 重新算每个簇的平均当新质心 → 重复到质心基本不动。三步循环，简单但有效。"},
+        {"name": "选 k", "detail": "肘部法：画出「簇内误差平方和 SSE」随 k 变化的曲线，找拐点（像手肘）——k 再大收益就变少。"},
+        {"name": "局限", "detail": "对初始质心敏感（可能收敛到局部最优）、假设簇是球形、且必须事先指定 k。实际应用里常多跑几次取最好结果。"}
+      ],
+      "code": "import numpy as np\ndef kmeans(X, k=3, iters=20):\n    n = X.shape[0]\n    centers = X[np.random.choice(n, k, replace=False)]  # 随机挑 k 个点当质心\n    for _ in range(iters):\n        dist = ((X[:, None] - centers[None, :]) ** 2).sum(-1)  # 到各质心的距离\n        labels = dist.argmin(axis=1)                            # 每个点归属最近质心\n        centers = np.array([X[labels == i].mean(axis=0) for i in range(k)])  # 重算质心\n    return labels, centers",
+      "todo": "把上面的 KMeans 骨架补全成你自己的实现：用二维随机点跑一遍、每个簇用不同颜色画出质心；再对比 sklearn 的 KMeans，看聚类结果是否一致。",
+      "exercise": "如果 k 从 3 改成 5，聚类结果会怎么变？跑跑看。",
+      "quiz_topics": ["KMeans 流程", "选 k", "局限"]
+    },
+    {
+      "id": "3.2",
+      "title": "PCA 降维",
+      "goal": "理解主成分=方差最大的方向，PCA 用于可视化与去噪",
+      "concepts": [
+        {"name": "主成分是什么", "detail": "PCA 找数据方差最大的新坐标轴（主成分），把数据投影上去能保留最多信息。第一主成分保留最多，第二主成分次之且与第一正交。"},
+        {"name": "降维的意义", "detail": "把高维压到 2-3 维用于可视化；去掉噪声维度（方差小的方向往往是噪声）能提升后续模型性能、加快训练。"},
+        {"name": "与聚类的区别", "detail": "PCA 找方向（降维），KMeans 找分组（聚类），两者正交可组合：先 PCA 降到 2 维再 KMeans，既可视化又能聚类。"}
+      ],
+      "code": "from sklearn.decomposition import PCA\n\npca = PCA(n_components=2)      # 降到 2 维\nX_2d = pca.fit_transform(X)\nprint('解释方差比', pca.explained_variance_ratio_)  # 各主成分保留多少信息",
+      "todo": "",
+      "exercise": "如果 explained_variance_ratio_ 前两维加起来只有 0.3，说明什么？",
+      "quiz_topics": ["主成分", "降维意义", "PCA vs 聚类"]
+    },
+    {
+      "id": "3.3",
+      "title": "特征工程",
+      "goal": "掌握标准化/归一化、one-hot，理解特征缩放与泄漏",
+      "concepts": [
+        {"name": "标准化 vs 归一化", "detail": "标准化 (x−μ)/σ 把特征变成均值 0、方差 1；归一化 (x−min)/(max−min) 压到 [0,1]。梯度下降、kNN、SVM 这类对尺度敏感的方法，不缩放会一个特征「霸凌」其它特征。"},
+        {"name": "one-hot 编码", "detail": "类别特征（如「颜色=红/绿/蓝」）变成 0/1 向量，否则「蓝(2) > 红(0)」这种假顺序会误导模型以为蓝比红大。"},
+        {"name": "特征泄漏", "detail": "最常见的坑：用全数据集（含测试集）算均值再标准化，测试集信息就漏进了训练。正确姿势：在训练集上 fit 缩放器，再用它 transform 测试集。"}
+      ],
+      "code": "from sklearn.preprocessing import StandardScaler, OneHotEncoder\n\nscaler = StandardScaler()\nX_train_scaled = scaler.fit_transform(X_train)   # 只用训练集 fit\nX_test_scaled = scaler.transform(X_test)          # 复用同一个 scaler\n\nenc = OneHotEncoder()   # 类别特征编码成 0/1 向量",
+      "todo": "",
+      "exercise": "为什么「在测试集上再 fit 一次 scaler」是错的？用一句话说清泄漏的本质。",
+      "quiz_topics": ["标准化 vs 归一化", "one-hot", "特征泄漏"]
+    },
+    {
+      "id": "3.4",
+      "title": "交叉验证与超参调优",
+      "goal": "会用 k-fold 与 grid search 选超参，理解正确的数据切分",
+      "concepts": [
+        {"name": "k-fold 交叉验证", "detail": "把训练数据分成 k 折，轮流拿一折当验证集、其余当训练，跑 k 次取平均。比单次留出法更稳，尤其数据少的时候。"},
+        {"name": "超参 vs 参数", "detail": "参数（w,b）是 fit 从训练集学出来的；超参（学习率、λ、k、树的深度）是人先定好、靠验证集挑的。混用两者会导致成绩虚高。"},
+        {"name": "Grid / Random Search", "detail": "GridSearch 穷举所有超参组合；RandomSearch 随机采样一部分组合，在参数空间大时更高效。它们都在验证集上比分数，选得分最高的组合。"}
+      ],
+      "code": "from sklearn.model_selection import cross_val_score, GridSearchCV\n\nscores = cross_val_score(model, X, y, cv=5)   # 5 折交叉验证\nprint('5 折平均准确率', scores.mean())\n\ngrid = GridSearchCV(SVC(), {'C': [0.1, 1, 10], 'kernel': ['rbf', 'linear']}, cv=5)\ngrid.fit(X, y)\nprint('最优超参', grid.best_params_)",
+      "todo": "",
+      "exercise": "为什么不直接用测试集调超参？调完再用同一测试集报成绩会有什么问题？",
+      "quiz_topics": ["k-fold", "超参 vs 参数", "Grid/Random Search"]
+    }
+  ]
+}

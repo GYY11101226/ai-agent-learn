@@ -15,8 +15,11 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env", override=True)
 
 CURRICULUM_DIR = BASE_DIR / "curriculum"
+COURSES_FILE = CURRICULUM_DIR / "courses.json"
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "learning.db"
+# 前端构建产物目录（生产环境由 FastAPI 托管，见 main.py）
+FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
 
 # ---------- LLM 提供方 ----------
 # anthropic（默认，走 Claude Messages 协议）

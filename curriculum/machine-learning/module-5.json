@@ -1,0 +1,78 @@
+{
+  "id": "module-5",
+  "title": "深度学习进阶",
+  "weeks": "第11-14周",
+  "prerequisites": "模块 4：神经网络基础",
+  "chapters": [
+    {
+      "id": "5.1",
+      "title": "PyTorch 入门",
+      "goal": "会用 Tensor、autograd、Dataset/DataLoader 写训练循环",
+      "concepts": [
+        {"name": "Tensor 与 autograd", "detail": "Tensor 是带 GPU 能力、可求导的数组。requires_grad=True 的张量会被自动记录计算图，loss.backward() 一次求出所有参数梯度，不用手写反向传播。"},
+        {"name": "Dataset / DataLoader", "detail": "Dataset 定义「怎么取一条数据」，DataLoader 负责自动批处理、打乱、多线程加载。告别手写 mini-batch。"},
+        {"name": "训练循环模板", "detail": "五件套：model → optimizer → loss → forward → backward+step。这套模板几乎适用所有 PyTorch 模型，后面的 CNN、RNN 只是换 model 定义。"}
+      ],
+      "code": "import torch\nimport torch.nn as nn\n\nmodel = nn.Sequential(nn.Linear(784, 128), nn.ReLU(), nn.Linear(128, 10))\nloss_fn = nn.CrossEntropyLoss()\noptimizer = torch.optim.Adam(model.parameters(), lr=0.001)\n\nfor xb, yb in train_loader:            # DataLoader 自动分 batch\n    logits = model(xb)                 # 前向\n    loss = loss_fn(logits, yb)         # 损失\n    optimizer.zero_grad()              # 清零上一步梯度\n    loss.backward()                    # 自动反向\n    optimizer.step()                   # 更新参数",
+      "todo": "",
+      "exercise": "为什么每次更新前要 optimizer.zero_grad()？去掉会怎样？",
+      "quiz_topics": ["autograd", "DataLoader", "训练循环模板"]
+    },
+    {
+      "id": "5.2",
+      "title": "CNN 卷积神经网络",
+      "goal": "理解卷积/池化如何提取空间特征与共享权重",
+      "concepts": [
+        {"name": "卷积", "detail": "一个小的滤波器（如 3×3）在图上滑动，每个位置做加权和，检测边缘、纹理等局部模式。同一滤波器扫全图 = 权重共享，参数量骤减。"},
+        {"name": "池化", "detail": "max-pool 取局部最大值做下采样，减少计算量、增加平移不变性（图里物体挪一点位置，输出差不多）。"},
+        {"name": "经典结构", "detail": "若干「卷积→激活→池化」层叠起来，最后接全连接层输出。感受野随层加深而变大：浅层看边角，深层看整体形状。"}
+      ],
+      "code": "import torch.nn as nn\n\ncnn = nn.Sequential(\n    nn.Conv2d(1, 32, kernel_size=3, padding=1),  # 卷积：1 通道→32 通道\n    nn.ReLU(),\n    nn.MaxPool2d(2),                              # 池化：下采样一半\n    nn.Flatten(),\n    nn.Linear(32*14*14, 10),                      # 全连接分类头\n)",
+      "todo": "",
+      "exercise": "一个 28×28 的图经过 3×3 卷积（padding=1）和 2×2 池化后，尺寸变成多少？",
+      "quiz_topics": ["卷积", "池化", "权重共享"]
+    },
+    {
+      "id": "5.3",
+      "title": "RNN/LSTM 与序列建模",
+      "goal": "理解序列建模与梯度消失，以及 LSTM 门控如何缓解",
+      "concepts": [
+        {"name": "RNN", "detail": "隐藏状态在时间步之间循环传递：每一步吃「当前输入 + 上一时刻状态」，输出更新后的状态。天然适合序列（文本、语音、时间序列）。"},
+        {"name": "梯度消失/爆炸", "detail": "反向传播要沿着时间步连乘，几十步之后梯度趋近 0（消失）或爆炸，长序列学不到远期依赖——RNN 记不住太早的信息。"},
+        {"name": "LSTM 门控", "detail": "三个门（输入/遗忘/输出）+ 细胞状态，让网络「选择性记忆」：重要的保留、不重要的遗忘。门控结构缓解了梯度消失，是 RNN 的改良版。"}
+      ],
+      "code": "import torch.nn as nn\n\nlstm = nn.LSTM(input_size=128, hidden_size=64, batch_first=True)\n# 输入 (batch, 时间步, 特征) → 输出 (batch, 时间步, hidden×方向)",
+      "todo": "",
+      "exercise": "为什么「复述一段长文本里第 3 个词」对 RNN 更难、对 Transformer 更容易？",
+      "quiz_topics": ["RNN 结构", "梯度消失", "LSTM 门控"]
+    },
+    {
+      "id": "5.4",
+      "title": "Transformer 与注意力",
+      "goal": "理解自注意力、多头，以及为何取代 RNN",
+      "concepts": [
+        {"name": "注意力", "detail": "每个位置用 Query 和所有位置的 Key 算相似度，softmax 后加权求 Value。任意两个位置（哪怕隔很远）能直接交互，不用像 RNN 一步步传。"},
+        {"name": "自注意力 + 多头", "detail": "自注意力 = 序列内部互相 attend（Q/K/V 都来自同一序列）；多头 = 并行做多组注意力，每组学不同的关系，再拼接。"},
+        {"name": "为何取代 RNN", "detail": "RNN 串行（一步等一步）慢且长程依赖差；Transformer 并行处理整个序列，长程依赖直接可达。今天的大语言模型（LLM）本质就是超大的 Transformer。"}
+      ],
+      "code": "import numpy as np\ndef attention(Q, K, V, d):\n    scores = Q @ K.T / np.sqrt(d)        # 相似度，除以根号 d 防梯度过大\n    e = np.exp(scores)\n    weights = e / e.sum(-1, keepdims=True)  # softmax 成权重\n    return weights @ V                    # 加权求和 Value",
+      "todo": "",
+      "exercise": "在「我喜欢吃苹果」这句话里，自注意力为什么能让「苹果」和「吃」之间的关系变强？",
+      "quiz_topics": ["注意力机制", "多头", "Transformer vs RNN"]
+    },
+    {
+      "id": "5.5",
+      "title": "训练调优与部署",
+      "goal": "掌握 dropout/BN/迁移学习，知道模型怎么上线",
+      "concepts": [
+        {"name": "dropout 与 BatchNorm", "detail": "dropout 训练时随机丢弃一部分神经元，逼网络不过度依赖某几个，防过拟合；BatchNorm 对每层输出归一化，让训练更稳、可用更大学习率。"},
+        {"name": "迁移学习", "detail": "预训练模型已在海量数据上学好通用特征，你只需冻结底层、微调顶层，几万条数据也能训出好模型。小数据场景的第一选择。"},
+        {"name": "部署", "detail": "训练完保存权重 → 加载后做推理；要跨框架或加速可导出 ONNX。在线推理看重延迟、离线批处理看重吞吐，按场景权衡 batch 大小。"}
+      ],
+      "code": "import torch\n\ntorch.save(model.state_dict(), 'model.pt')   # 保存权重\n\nmodel.load_state_dict(torch.load('model.pt'))  # 加载\nmodel.eval()                                   # 切到推理模式(关 dropout)\nwith torch.no_grad():\n    pred = model(x)                            # 推理不再记录梯度",
+      "todo": "",
+      "exercise": "推理时为什么要 model.eval() 并包一层 torch.no_grad()？各有什么作用？",
+      "quiz_topics": ["dropout / BN", "迁移学习", "保存与部署"]
+    }
+  ]
+}

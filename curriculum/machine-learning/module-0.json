@@ -1,0 +1,64 @@
+{
+  "id": "module-0",
+  "title": "预备：机器学习心智模型",
+  "weeks": "第1周",
+  "prerequisites": "懂基础 Python 即可；数学只需高中数学，线性代数/概率课内补",
+  "chapters": [
+    {
+      "id": "0.1",
+      "title": "什么是机器学习",
+      "goal": "能说清「规则系统 vs 从数据学习」的本质区别，以及机器学习的三个要素（数据、模型、算法）",
+      "concepts": [
+        {"name": "机器学习定义", "detail": "机器学习 = 不手写 if-else 规则，而是让程序从数据里自动学出一个函数 y=f(x)。规则是你告诉它每一步怎么做；学习是你给它「输入 x 和期望输出 y」的例子，让它自己找出规律。"},
+        {"name": "模型 = 带参数的函数", "detail": "预测就是把输入算成输出；学习就是不断调参数，让预测尽可能接近真实。线性模型 ŷ = w·x + b 里，w 和 b 就是参数——学习 = 找一组最好的 w,b。"},
+        {"name": "三要素与 ML 和 Agent 的关系", "detail": "数据、模型、算法三件套。机器学习（从数据拟合函数）和 AI Agent（会调工具的 LLM 循环）是两件事，正交可组合：Agent 里可以嵌一个 ML 模型来打分或分类。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "用一句话向不写代码的同事解释：为什么垃圾邮件分类要机器学习，而不是写一堆「含『免费』就判垃圾」的规则？",
+      "quiz_topics": ["规则 vs 学习", "模型三要素", "ML 与 Agent 的关系"]
+    },
+    {
+      "id": "0.2",
+      "title": "三大范式与任务类型",
+      "goal": "分清监督/无监督/强化三种范式，以及分类/回归/聚类各属哪种",
+      "concepts": [
+        {"name": "监督学习", "detail": "用带标签的数据（输入 x 配着正确答案 y）学映射 x→y。回归预测连续值（房价、温度），分类预测离散类别（垃圾邮件/正常）。学习信号来自「预测和真实差多少」的损失。"},
+        {"name": "无监督学习", "detail": "没有标签，让算法自己从数据里发现结构。聚类把相似样本分组（KMeans 分客群），降维把高维数据压到低维（PCA 可视化）。目标不是拟合标签，而是「发现结构」。"},
+        {"name": "强化学习", "detail": "通过「行动→奖励/惩罚」试错来学策略，像训练宠物：做对给吃的、做错不给。本课不深入，只需知道它是第三大范式，和 AI Agent 的决策循环有天然联系。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "判断以下各属于分类、回归还是聚类：预测明天股价、把用户分成高/中/低价值三组、判断图片是不是猫。",
+      "quiz_topics": ["三大范式", "分类 vs 回归", "任务归类"]
+    },
+    {
+      "id": "0.3",
+      "title": "线性代数与概率速通",
+      "goal": "用向量/矩阵表示数据集，理解梯度是最陡上升方向，会用 numpy 做矩阵运算",
+      "concepts": [
+        {"name": "向量与矩阵", "detail": "一个样本 = 一行向量（各列是特征），整个数据集 = 矩阵 X，行数=样本数、列数=特征数。矩阵乘法 X·w 就是把「每个样本的加权和」一次性算出来。"},
+        {"name": "导数与梯度", "detail": "导数 = 函数某点的斜率（变化快慢）；梯度 ∇J = 一个向量，每个分量是 J 对那个变量的偏导，指向 J 上升最快的方向。要下降就往 −∇J 走——这就是梯度下降的由来。"},
+        {"name": "概率基础", "detail": "概率 P(A)=A 发生的频率；条件概率 P(A|B)=已知 B 发生下 A 的概率；期望 E[X]=加权平均；独立=互不影响。这些是模块 2 朴素贝叶斯、模块 4 交叉熵的地基。"}
+      ],
+      "code": "import numpy as np\nX = np.array([[1, 2], [3, 4], [5, 6]])   # 3 个样本 × 2 个特征\nw = np.array([0.5, -1.0])\nprint(X @ w)          # 矩阵乘法 = 每个样本的加权和\nprint(X.mean(axis=0)) # 每列(特征)的均值\nprint(X.reshape(2, 3))   # 重塑形状",
+      "todo": "",
+      "exercise": "用手算 2×2 矩阵乘 2×1 向量的结果，再用 numpy 的 @ 验证。",
+      "quiz_topics": ["矩阵表示", "梯度方向", "条件概率"]
+    },
+    {
+      "id": "0.4",
+      "title": "环境搭建与第一个模型",
+      "goal": "装好 numpy/scikit-learn，跑通 fit/predict，理解「训练一步」发生了什么",
+      "concepts": [
+        {"name": "科学计算栈", "detail": "numpy 管 ndarray（多维数组）与向量化运算；scikit-learn 管现成机器学习算法（统一叫 estimator）；matplotlib 管画图。PyTorch 留到模块 5 深度学习才登场。"},
+        {"name": "estimator 三步曲", "detail": "所有 sklearn 模型统一三步：实例化模型 → fit(X, y) 训练 → predict(X) 预测。接口一致，换个模型只是换类名，这是 sklearn 最有价值的设计。"},
+        {"name": "训练到底发生了什么", "detail": "fit 不是「背下答案」，而是用算法在数据里找一组最优参数。跑通 iris 分类并打印准确率，你的第一个机器学习模型就上线了。"}
+      ],
+      "code": "from sklearn.datasets import load_iris\nfrom sklearn.linear_model import LogisticRegression\nfrom sklearn.model_selection import train_test_split\nX, y = load_iris(return_X_y=True)          # 150 朵花 × 4 个特征\nXtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.3, random_state=1)\nmodel = LogisticRegression(max_iter=200)\nmodel.fit(Xtr, ytr)                          # 训练一步\nprint('准确率', model.score(Xte, yte))       # 在测试集上评估",
+      "todo": "把数据换成「自己构造的随机点」——用 numpy 按两种类各生成 50 个对角的点，跑一遍 fit/predict，观察模型分类的准确率和决策边界长什么样。",
+      "exercise": "把逻辑回归换成 sklearn 的 k 近邻（KNeighborsClassifier），观察准确率变化。",
+      "quiz_topics": ["estimator 三步", "fit 的本质", "train/test 切分"]
+    }
+  ]
+}

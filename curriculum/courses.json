@@ -1,0 +1,20 @@
+[
+  {
+    "id": "ai-agent",
+    "title": "AI Agent 从入门到精通",
+    "description": "14 周、Python 手写 agentic loop 的渐进式课程",
+    "dir": "ai-agent"
+  },
+  {
+    "id": "fastapi",
+    "title": "FastAPI 从入门到精通",
+    "description": "从路由与校验到认证、测试与部署，边做边学构建生产级 API",
+    "dir": "fastapi"
+  },
+  {
+    "id": "machine-learning",
+    "title": "机器学习 从入门到精通",
+    "description": "从线性回归到 Transformer，numpy 手写核心 + sklearn/PyTorch 实战的渐进式课程",
+    "dir": "machine-learning"
+  }
+]

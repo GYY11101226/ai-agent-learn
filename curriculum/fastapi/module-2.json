@@ -1,0 +1,64 @@
+{
+  "id": "module-2",
+  "title": "Pydantic 与配置管理",
+  "weeks": "第4-5周",
+  "prerequisites": "完成模块 1",
+  "chapters": [
+    {
+      "id": "2.1",
+      "title": "Field 与常用校验",
+      "goal": "会用 Field 的数值/长度/正则约束覆盖常见校验需求",
+      "concepts": [
+        {"name": "Field 约束", "detail": "数值 gt/ge/lt/le，字符串 min_length/max_length/pattern 正则，一套约束同时作用于校验和文档。"},
+        {"name": "default_factory", "detail": "可变默认值（list/dict）必须用 default_factory=list，不能直接 = []，否则所有实例共享同一对象。"},
+        {"name": "约束报错", "detail": "违反约束同样进 422 详情，前端可按 loc 定位到具体字段。"}
+      ],
+      "code": "from pydantic import Field\n\nclass Account(BaseModel):\n    age: int = Field(ge=0, le=150)\n    nickname: str = Field(min_length=2, max_length=20)\n    tags: list[str] = Field(default_factory=list)",
+      "todo": "",
+      "exercise": "给「用户名 3-20 字符、密码至少 8 位且含数字」的字段加 Field 校验。",
+      "quiz_topics": ["Field 约束族", "default_factory 的原因", "校验错误定位"]
+    },
+    {
+      "id": "2.2",
+      "title": "嵌套模型与模型复用",
+      "goal": "会组合嵌套模型，会用继承组织 Base/Create/Out 三件套",
+      "concepts": [
+        {"name": "嵌套校验", "detail": "模型字段的类型可以是另一个模型，多层 JSON 结构逐层自动校验。"},
+        {"name": "三件套分工", "detail": "UserBase 公共字段 / UserCreate 含密码 / UserOut 不含密码——同一资源多视图，改字段只改 Base。"},
+        {"name": "模型互转", "detail": ".model_dump() 转字典；UserOut(**user.model_dump()) 用字典重组另一个模型。"}
+      ],
+      "code": "class OrderBase(BaseModel):\n    sku: str\n    qty: int\n\nclass OrderCreate(OrderBase):\n    pass\n\nclass OrderOut(OrderBase):\n    id: int",
+      "todo": "",
+      "exercise": "为课程章节设计 ChapterCreate/ChapterOut 一对模型（Create 有 author，Out 没有内部备注）。",
+      "quiz_topics": ["嵌套校验", "Base/Create/Out 分工", "model_dump"]
+    },
+    {
+      "id": "2.3",
+      "title": "自定义校验器",
+      "goal": "会写 field_validator 和 model_validator 处理单字段与跨字段规则",
+      "concepts": [
+        {"name": "field_validator", "detail": "单字段自定义规则（如把 username 统一转小写），校验通过 return，失败抛 ValueError。"},
+        {"name": "model_validator", "detail": "跨字段校验（如结束日期必须晚于开始日期），mode='after' 在字段都校验完后运行。"},
+        {"name": "报错友好", "detail": "抛 ValueError 的信息会出现在 422 响应里——写清「为什么不行」比只说「错了」有用。"}
+      ],
+      "code": "from pydantic import field_validator, model_validator\n\nclass Signup(BaseModel):\n    username: str\n    date_start: date\n    date_end: date\n\n    @field_validator('username')\n    @classmethod\n    def lower(cls, v):\n        return v.lower()\n\n    @model_validator(mode='after')\n    def check_range(self):\n        if self.date_end <= self.date_start:\n            raise ValueError('结束日期必须晚于开始日期')\n        return self",
+      "todo": "给日期区间模型写好 model_validator 后，故意传一个开始晚于结束的区间，看 422 里的报错文案。",
+      "exercise": "写校验器保证 discount 在 (0, 1] 且 price × discount 的结果保留两位小数。",
+      "quiz_topics": ["两类 validator 的场景", "ValueError 与 422", "校验逻辑复用"]
+    },
+    {
+      "id": "2.4",
+      "title": "Settings 与 .env 配置",
+      "goal": "会用 pydantic-settings 管理配置，理解密钥安全与配置集中",
+      "concepts": [
+        {"name": "BaseSettings", "detail": "配置类继承后，字段自动从环境变量/.env 读取，类型校验同样生效——配置也是数据。"},
+        {"name": "密钥安全", "detail": ".env 不进 git；密钥绝不硬编码在代码里，代码里只有变量名（本平台 config.py 是现成范例）。"},
+        {"name": "集中与复用", "detail": "config.py 集中定义一次，全项目 import 使用，避免配置散落各处。"}
+      ],
+      "code": "from pydantic_settings import BaseSettings\n\nclass Settings(BaseSettings):\n    debug: bool = False\n    database_url: str = 'sqlite:///./app.db'\n\n    model_config = {'env_file': '.env'}\n\nsettings = Settings()",
+      "todo": "",
+      "exercise": "给应用加 DEBUG 和 DATABASE_URL 两个配置项，在 .env 里改值并打印验证生效。",
+      "quiz_topics": ["BaseSettings 读取顺序", "密钥管理", "集中配置的好处"]
+    }
+  ]
+}

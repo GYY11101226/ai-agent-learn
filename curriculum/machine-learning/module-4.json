@@ -1,0 +1,78 @@
+{
+  "id": "module-4",
+  "title": "神经网络基础",
+  "weeks": "第8-10周",
+  "prerequisites": "模块 3：无监督 + 工程",
+  "chapters": [
+    {
+      "id": "4.1",
+      "title": "从感知机到 MLP",
+      "goal": "理解神经元、激活函数，以及非线性是表达力的来源",
+      "concepts": [
+        {"name": "感知机", "detail": "一个神经元 = 加权求和 + 激活函数。单个神经元（感知机）只能切出线性边界，连「异或 XOR」都分不了——这是它致命的局限。"},
+        {"name": "激活函数", "detail": "sigmoid/tanh 会饱和（两端梯度趋 0）；ReLU=max(0,z) 计算便宜、不饱和、缓解梯度消失，是隐藏层的默认选择。没有激活函数，多层也只是线性，等于白堆。"},
+        {"name": "多层堆叠", "detail": "隐藏层 + 非线性激活，让网络能拟合任意复杂函数（万能近似）。深度 = 表达力，这正是「深度学习」的由来。"}
+      ],
+      "code": "import numpy as np\ndef relu(z):\n    return np.maximum(0, z)   # 现代网络默认激活\n\nz = np.array([-2, -1, 0, 1, 2])\nprint(relu(z))   # [0, 0, 0, 1, 2] —— 负的截成 0",
+      "todo": "",
+      "exercise": "如果所有激活函数都换成线性 f(z)=z（也就是没有激活函数），三层网络等价于什么？为什么？",
+      "quiz_topics": ["感知机局限", "激活函数", "非线性的作用"]
+    },
+    {
+      "id": "4.2",
+      "title": "前向传播与损失",
+      "goal": "矩阵化写出一层前向，理解常用损失",
+      "concepts": [
+        {"name": "前向传播", "detail": "一层 = 两件事：z = W·x + b（线性变换），a = σ(z)（激活）。逐层算到输出，就是前向传播。矩阵化后一次算一批。"},
+        {"name": "损失选择", "detail": "回归用 MSE；二分类用交叉熵；多分类用 softmax + 交叉熵。损失不同、任务不同——它是神经网络输出的「裁判」。"},
+        {"name": "softmax", "detail": "把最后一层的原始分数 logits 转成「和为 1 的概率分布」。多分类时，模型输出的就是每个类的概率。"}
+      ],
+      "code": "import numpy as np\ndef softmax(logits):\n    e = np.exp(logits - logits.max())   # 减最大值防溢出\n    return e / e.sum()\n\nlogits = np.array([2.0, 1.0, 0.1])\nprint(softmax(logits))   # 三个数，和为 1",
+      "todo": "",
+      "exercise": "softmax 为什么要先减 logits.max()？去掉会出什么问题？",
+      "quiz_topics": ["前向传播", "损失选择", "softmax"]
+    },
+    {
+      "id": "4.3",
+      "title": "反向传播",
+      "goal": "手写 numpy 反向传播训练 MLP，理解链式法则",
+      "concepts": [
+        {"name": "链式法则", "detail": "误差如何传到每个参数？∂L/∂w = ∂L/∂a · ∂a/∂z · ∂z/∂w，像多米诺骨牌一层层往回推。反向传播就是系统地用链式法则算全部参数梯度。"},
+        {"name": "梯度回传直觉", "detail": "每层拿到「输出端的误差信号」，乘上自己这一层的导数，再传给上一层。误差像回音一样从输出层一路传回输入层。"},
+        {"name": "反向传播的本质", "detail": "它不是一个新算法，而是「高效计算所有参数梯度」的方法——和前向对称。没有它，训练深层网络要逐个参数求导，慢到不可行。"}
+      ],
+      "code": "import numpy as np\nX = np.array([[0,0],[0,1],[1,0],[1,1]])          # XOR 输入\ny = np.array([[0],[1],[1],[0]])                   # XOR 输出\nW1 = np.random.randn(2, 4); b1 = np.zeros(4)\nW2 = np.random.randn(4, 1); b2 = np.zeros(1)\nlr = 0.5\nfor _ in range(2000):\n    h = np.tanh(X @ W1 + b1)                      # 隐藏层(前向)\n    out = 1/(1+np.exp(-(h @ W2 + b2)))            # 输出层 sigmoid\n    d_out = (out - y) / len(X)                    # 输出误差\n    d_h = (d_out @ W2.T) * (1 - h**2)             # 误差回传到隐藏层(tanh 导数)\n    W2 -= lr * h.T @ d_out; b2 -= lr * d_out.sum(0)\n    W1 -= lr * X.T @ d_h;   b1 -= lr * d_h.sum(0)\nprint('预测:', out.round())   # 应接近 [[0],[1],[1],[0]]",
+      "todo": "把这段反向传播逐行读懂，用纸笔推一遍「误差怎么从输出层回到 W1」；然后把隐藏层神经元数从 4 改到 2，看还能不能学出 XOR，理解为什么不行。",
+      "exercise": "为什么 XOR 用单个神经元分不了，加一层隐藏层却能分？从决策边界角度想一想。",
+      "quiz_topics": ["链式法则", "梯度回传", "反向传播本质"]
+    },
+    {
+      "id": "4.4",
+      "title": "优化器与训练技巧",
+      "goal": "理解 SGD 到 Adam，会处理学习率、初始化、早停",
+      "concepts": [
+        {"name": "Adam", "detail": "SGD 对所有参数用同一个学习率，容易在陡的方向震荡。Adam 给每个参数自适应学习率（用一阶矩+二阶矩），训练又快又稳，是当前默认优化器。"},
+        {"name": "权重初始化", "detail": "初始权重太小→梯度消失，太大→梯度爆炸。He/Xavier 初始化根据层宽度调整方差，让信号在层间保持稳定。"},
+        {"name": "早停与 batch", "detail": "验证集指标不再下降就停下（早停），防过拟合还省时间；mini-batch 太小训练慢、太大内存吃紧，工程上取个平衡。"}
+      ],
+      "code": "# 训练循环骨架：SGD 更新 + 验证早停（前向/反向见 4.2、4.3）\nbest_loss = float('inf'); patience = 5; no_improve = 0\nfor epoch in range(100):\n    loss = forward_and_backward(model, X, y)   # 返回本 epoch 的损失\n    for p, g in zip(model.params, model.grads):\n        p -= lr * g                            # SGD 更新参数\n    if loss < best_loss:\n        best_loss, no_improve = loss, 0\n    else:\n        no_improve += 1\n        if no_improve >= patience: break       # 早停：连续 patience 次没改进",
+      "todo": "",
+      "exercise": "把 patience 从 5 调到 1，可能导致什么问题？调到 100 呢？",
+      "quiz_topics": ["Adam vs SGD", "权重初始化", "早停"]
+    },
+    {
+      "id": "4.5",
+      "title": "手写数字识别（MNIST 项目）",
+      "goal": "numpy 手写 MLP 跑通 MNIST，把前四章串起来",
+      "concepts": [
+        {"name": "MNIST 数据集", "detail": "28×28 的手写数字灰阶图，压平成 784 维向量输入，softmax 输出 10 个类别（0-9）的概率。是机器学习的「Hello World」。"},
+        {"name": "端到端流程", "detail": "加载数据 → 归一化到 [0,1] → 前向 → 算交叉熵 → 反向 → 更新权重 → 验证集测准确率。前四章各管一段，这里串成一条流水线。"},
+        {"name": "手写 vs 框架", "detail": "这章手写只为把直觉焊死；真正做项目时用 PyTorch 一行 `nn.Linear` 就搞定。手写一遍，是为了下次看框架源码不慌。"}
+      ],
+      "code": "import numpy as np\nfrom sklearn.datasets import fetch_openml\nfrom sklearn.model_selection import train_test_split\n\nX, y = fetch_openml('mnist_784', version=1, return_X_y=True, as_frame=False, parser='liac-arff')\nX, y = X / 255.0, y.astype(int)\nXtr, Xte, ytr, yte = train_test_split(X, y, test_size=0.2, random_state=1)\n\ndef onehot(y, k=10):\n    m = np.zeros((len(y), k)); m[np.arange(len(y)), y] = 1; return m\nYtr, Yte = onehot(ytr), onehot(yte)\n\nnp.random.seed(1)\nW1 = np.random.randn(784, 128) * 0.1; b1 = np.zeros(128)\nW2 = np.random.randn(128, 10) * 0.1;  b2 = np.zeros(10)\n\ndef forward(X):\n    h = np.maximum(0, X @ W1 + b1)               # ReLU 隐藏层\n    z = h @ W2 + b2\n    e = np.exp(z - z.max(1, keepdims=True))\n    return e / e.sum(1, keepdims=True), h         # softmax 输出\n\nlr = 0.1\nfor epoch in range(20):\n    probs, h = forward(Xtr)\n    d_out = (probs - Ytr) / len(Xtr)              # 交叉熵 + softmax 的梯度\n    d_h = (d_out @ W2.T) * (h > 0)                # ReLU 导数\n    W2 -= lr * h.T @ d_out; b2 -= lr * d_out.sum(0)\n    W1 -= lr * Xtr.T @ d_h;   b1 -= lr * d_h.sum(0)\n    if epoch % 5 == 0:\n        acc = (forward(Xte)[0].argmax(1) == yte).mean()\n        print(f'epoch {epoch}: test acc={acc:.3f}')",
+      "todo": "",
+      "exercise": "把隐藏层神经元从 128 改成 8，准确率如何变化？为什么变小？",
+      "quiz_topics": ["MNIST 流程", "端到端训练", "手写 vs 框架"]
+    }
+  ]
+}
