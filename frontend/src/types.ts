@@ -37,7 +37,13 @@ export interface LessonContent {
 }
 
 export interface LessonResponse {
-  chapter: { id: string; title: string; goal: string }
+  chapter: {
+    id: string
+    title: string
+    goal: string
+    diagram: string
+    animation: string
+  }
   lesson: LessonContent
 }
 

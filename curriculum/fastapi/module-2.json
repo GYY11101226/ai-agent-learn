@@ -8,6 +8,7 @@
       "id": "2.1",
       "title": "Field 与常用校验",
       "goal": "会用 Field 的数值/长度/正则约束覆盖常见校验需求",
+      "diagram": "flowchart LR\n  A[\"Field 声明约束: gt=0\"] --> B[请求进来逐约束校验]\n  B --> C{全部满足?}\n  C -->|是| D[进入处理函数]\n  C -->|否| E[\"422 带错误详情\"]",
       "concepts": [
         {"name": "Field 约束", "detail": "数值 gt/ge/lt/le，字符串 min_length/max_length/pattern 正则，一套约束同时作用于校验和文档。"},
         {"name": "default_factory", "detail": "可变默认值（list/dict）必须用 default_factory=list，不能直接 = []，否则所有实例共享同一对象。"},
@@ -22,6 +23,7 @@
       "id": "2.2",
       "title": "嵌套模型与模型复用",
       "goal": "会组合嵌套模型，会用继承组织 Base/Create/Out 三件套",
+      "diagram": "flowchart TD\n  A[\"Address 模型\"] --> B[\"嵌进 User 模型\"]\n  B --> C[提交 JSON 递归校验]\n  C --> D{内外层都通过?}\n  D -->|是| E[User 对象有效]\n  D -->|否| F[\"422 指出出错字段\"]",
       "concepts": [
         {"name": "嵌套校验", "detail": "模型字段的类型可以是另一个模型，多层 JSON 结构逐层自动校验。"},
         {"name": "三件套分工", "detail": "UserBase 公共字段 / UserCreate 含密码 / UserOut 不含密码——同一资源多视图，改字段只改 Base。"},
@@ -36,6 +38,7 @@
       "id": "2.3",
       "title": "自定义校验器",
       "goal": "会写 field_validator 和 model_validator 处理单字段与跨字段规则",
+      "diagram": "flowchart LR\n  A[\"@field_validator 装饰器\"] --> B[自定义规则函数]\n  B --> C{校验通过?}\n  C -->|是| D[字段值有效]\n  C -->|否| E[\"抛 ValueError\"]\n  E --> F[\"FastAPI 转 422\"]",
       "concepts": [
         {"name": "field_validator", "detail": "单字段自定义规则（如把 username 统一转小写），校验通过 return，失败抛 ValueError。"},
         {"name": "model_validator", "detail": "跨字段校验（如结束日期必须晚于开始日期），mode='after' 在字段都校验完后运行。"},
@@ -50,6 +53,7 @@
       "id": "2.4",
       "title": "Settings 与 .env 配置",
       "goal": "会用 pydantic-settings 管理配置，理解密钥安全与配置集中",
+      "diagram": "flowchart LR\n  A[\".env 文件\"] --> B[\"pydantic-settings 读取\"]\n  B --> C[按类型注解转换]\n  C --> D[\"代码 import Settings 使用\"]\n  A --> E[\"gitignore 排除: 密钥不进 git\"]",
       "concepts": [
         {"name": "BaseSettings", "detail": "配置类继承后，字段自动从环境变量/.env 读取，类型校验同样生效——配置也是数据。"},
         {"name": "密钥安全", "detail": ".env 不进 git；密钥绝不硬编码在代码里，代码里只有变量名（本平台 config.py 是现成范例）。"},

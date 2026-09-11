@@ -8,6 +8,7 @@
       "id": "5.1",
       "title": "测试：TestClient + pytest",
       "goal": "会用 TestClient 写接口测试，会用依赖覆盖隔离数据库",
+      "diagram": "flowchart LR\n  A[\"TestClient 发请求\"] --> B[走完整 app 处理]\n  B --> C[断言状态码与 JSON]\n  D[\"pytest fixture\"] --> E[\"复用 app 与测试 db\"]\n  E --> A",
       "concepts": [
         {"name": "TestClient", "detail": "不起真实服务、进程内直接调 app；配合 pytest，一个函数就是一条用例。"},
         {"name": "依赖覆盖", "detail": "app.dependency_overrides[get_db] = get_test_db——测试永不触碰真实数据。"},
@@ -22,6 +23,7 @@
       "id": "5.2",
       "title": "项目结构与 APIRouter",
       "goal": "会拆分多文件路由，形成 routers/schemas/models 的可维护结构",
+      "diagram": "flowchart LR\n  A[按功能拆 APIRouter] --> B[\"各自设 prefix 与 tags\"]\n  B --> C[\"include_router 挂到主 app\"]\n  C --> D[模块化目录结构]",
       "concepts": [
         {"name": "APIRouter", "detail": "每个资源一个 router（prefix + tags），main.py 里 include_router 组装成应用。"},
         {"name": "目录分层", "detail": "models（ORM）/ schemas（Pydantic）/ routers（路由）/ core（配置）各司其职——本平台 frontend/api 分层是同理。"},
@@ -36,6 +38,7 @@
       "id": "5.3",
       "title": "日志与可观测性",
       "goal": "会配分级日志与请求级观测，知道该盯哪些核心指标",
+      "diagram": "flowchart LR\n  A[中间件捕获每请求] --> B[\"logging 结构化输出\"]\n  B --> C[日志聚合到收集器]\n  C --> D[\"按 trace id 查询链路\"]",
       "concepts": [
         {"name": "日志分级", "detail": "DEBUG 开发排查 / INFO 关键路径 / WARNING 可疑 / ERROR 失败；生产环境别用 print。"},
         {"name": "请求级观测", "detail": "每条请求记 method/path/状态码/耗时/request_id，出问题时才能把一次请求串起来查。"},
@@ -50,6 +53,7 @@
       "id": "5.4",
       "title": "部署：Docker 与多 worker",
       "goal": "会写 Dockerfile、会用 gunicorn+uvicorn worker 跑多进程，理解 --reload 只属开发",
+      "diagram": "flowchart LR\n  A[代码] --> B[Dockerfile 打镜像]\n  B --> C[容器运行]\n  C --> D[\"uvicorn 多 worker 进程\"]\n  D --> E[前置负载均衡]",
       "concepts": [
         {"name": "部署形态", "detail": "gunicorn -k uvicorn.workers.UvicornWorker -w 4 多进程榨满多核；--reload 绝不能进生产。"},
         {"name": "Dockerfile 要点", "detail": "slim 基础镜像；依赖层单独 COPY requirements.txt 先装（利用构建缓存）；用非 root 用户运行。"},
@@ -64,6 +68,7 @@
       "id": "5.5",
       "title": "安全加固与上线清单",
       "goal": "掌握上线前 checklist：密钥、CORS、限流、备份、HTTPS",
+      "diagram": "flowchart LR\n  A[上线清单] --> B[HTTPS 与 CORS 白名单]\n  B --> C[限流与输入校验]\n  C --> D[密钥管理与健康检查]\n  D --> E{逐项通过?}\n  E -->|是| F[上线]\n  E -->|否| G[修复后重查]\n  G --> D",
       "concepts": [
         {"name": "密钥与开关", "detail": "密钥只进环境变量；生产按需关闭调试与文档（如 docs_url=None），减少攻击面。"},
         {"name": "CORS 与限流", "detail": "CORSMiddleware 用白名单放行可信来源；对外接口加限流防刷。"},

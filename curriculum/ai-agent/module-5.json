@@ -8,6 +8,7 @@
       "id": "5.1",
       "title": "评估体系 Evals",
       "goal": "能量化「Agent 到底好不好」，会造三层评估集",
+      "diagram": "flowchart TD\n  A[场景集] --> B[\"跑完整 agent 轨迹\"]\n  B --> C[\"逐例判分: 规则/LLM 裁判/人工\"]\n  C --> D[聚合报告]\n  D --> E[\"与基线对比防回归\"]",
       "concepts": [
         {"name": "三层评估", "detail": "单步（单次调用对不对）、轨迹（多步是否合理）、端到端（最终是否达标）。"},
         {"name": "回归", "detail": "每次改完跑一遍评测集做回归，用正常/边界/异常三类输入。"},
@@ -22,6 +23,7 @@
       "id": "5.2",
       "title": "可观测性",
       "goal": "用日志/追踪/指标看见 Agent 内部发生了什么",
+      "diagram": "flowchart LR\n  A[每次请求] --> B[\"trace 下挂 span: LLM 调用/工具调用\"]\n  B --> C[\"日志与指标导出\"]\n  C --> D[dashboard]\n  D --> E[异常告警]",
       "concepts": [
         {"name": "三件套", "detail": "logging 记每轮 model→tool→result；tracing 串成链路定位卡点；metrics 记成功率/轮数/耗时。"},
         {"name": "最低要求", "detail": "给 run_agent 加结构化日志，记每轮用什么工具、耗时多久。"}
@@ -35,6 +37,7 @@
       "id": "5.3",
       "title": "可靠性与护栏",
       "goal": "出错不崩、能兜底、有输入输出护栏",
+      "diagram": "flowchart LR\n  A[输入] --> B[\"输入护栏: 注入检测\"]\n  B --> C[agent 循环]\n  C --> D[\"输出护栏: 格式/毒性校验\"]\n  D --> E{通过?}\n  E -->|是| F[放行]\n  E -->|否| G[拦截]",
       "concepts": [
         {"name": "重试与退避", "detail": "限流/5xx 用指数退避重试，SDK max_retries 已内置部分。"},
         {"name": "降级", "detail": "主模型挂切备选，工具超时给默认值。"},
@@ -49,6 +52,7 @@
       "id": "5.4",
       "title": "成本与性能",
       "goal": "同样的能力花更少的钱和时间",
+      "diagram": "flowchart TD\n  A[\"token 用量 × 单价\"] --> B[成本统计]\n  B --> C[监控成本曲线]\n  C --> D{超标?}\n  D -->|是| E[\"优化: prompt 缓存/小模型/批处理\"]\n  E --> A",
       "concepts": [
         {"name": "模型路由", "detail": "简单任务用便宜模型（haiku），难的才上 Opus。"},
         {"name": "Prompt 缓存", "detail": "缓存稳定前缀（system/tools），重复请求便宜一个量级。"},
@@ -63,6 +67,7 @@
       "id": "5.5",
       "title": "部署与运维",
       "goal": "从本机脚本到能给人用的服务",
+      "diagram": "flowchart LR\n  A[代码] --> B[\"容器化+CI 测试\"]\n  B --> C[部署]\n  C --> D[健康检查]\n  D --> E{失败?}\n  E -->|是| F[回滚]\n  E -->|否| G[上线运行]",
       "concepts": [
         {"name": "服务化", "detail": "把 run_agent 包成 FastAPI 端点，配环境变量、健康检查。"},
         {"name": "配置隔离", "detail": "密钥走环境/密钥管理，绝不进仓库。"},
@@ -77,6 +82,7 @@
       "id": "5.6",
       "title": "安全与治理",
       "goal": "防注入、防越权、可审计",
+      "diagram": "flowchart LR\n  A[数据分级] --> B[敏感数据脱敏]\n  B --> C[最小权限]\n  C --> D[操作审计]\n  D --> E[合规检查清单]",
       "concepts": [
         {"name": "Prompt 注入", "detail": "用户输入夹带「忽略之前指令」，对策：隔离用户内容与系统指令、校验工具参数来源。"},
         {"name": "越权", "detail": "Agent 能碰的资源按用户权限最小化，不因模型要求就执行敏感操作。"},

@@ -8,6 +8,7 @@
       "id": "3.1",
       "title": "SQLAlchemy 模型与建表",
       "goal": "会定义 ORM 模型、创建 engine 与建表，理解 Session 是什么",
+      "diagram": "flowchart LR\n  A[\"Python 类 + DeclarativeBase\"] --> B[映射表结构]\n  B --> C[\"create_all 生成 SQL\"]\n  C --> D[数据库建表]",
       "concepts": [
         {"name": "ORM 映射", "detail": "Python 类对应表、类属性对应列；declarative_base() 是所有模型的基类起点。"},
         {"name": "Engine 与连接", "detail": "create_engine(url) 管理连接池；SQLAlchemy 2.x 的经典用法是同步的，异步另有方案。"},
@@ -22,6 +23,7 @@
       "id": "3.2",
       "title": "依赖注入管理会话：CRUD 核心",
       "goal": "会用 yield 依赖封装 get_db，在路由里完成完整 CRUD",
+      "diagram": "flowchart TD\n  A[请求] --> B[\"Depends(get_db) 开 Session\"]\n  B --> C[CRUD 操作]\n  C --> D[\"commit 提交\"]\n  D --> E[返回响应]\n  E --> F[Session 关闭]",
       "concepts": [
         {"name": "yield 依赖", "detail": "def get_db(): yield session——路由执行完自动关闭会话，出异常自动回滚，资源不泄漏。"},
         {"name": "CRUD 惯例", "detail": "增 add+commit+refresh；查 get/filter；改 先查后改再 commit；删 delete+commit。"},
@@ -36,6 +38,7 @@
       "id": "3.3",
       "title": "异步数据库",
       "goal": "理解 async engine 与异步 Session 的写法，能判断何时值得用异步",
+      "diagram": "flowchart LR\n  A[async engine] --> B[async session]\n  B --> C[\"await 执行 SQL\"]\n  C --> D[不阻塞事件循环]\n  D --> E[高并发吞吐]",
       "concepts": [
         {"name": "异步驱动", "detail": "create_async_engine + async with AsyncSession；SQLite 配 aiosqlite，Postgres 配 asyncpg。"},
         {"name": "何时值得", "detail": "大量并发请求各自等数据库时异步收益明显；小工具同步方案更简单直接。"},
@@ -50,6 +53,7 @@
       "id": "3.4",
       "title": "迁移：Alembic 流程",
       "goal": "知道为什么需要迁移，能走通 init → revision → upgrade 流程",
+      "diagram": "flowchart LR\n  A[修改 SQLAlchemy 模型] --> B[\"alembic revision 自动生成\"]\n  B --> C[\"迁移脚本: 版本化\"]\n  C --> D[\"upgrade 应用到数据库\"]\n  D --> E[版本表记录演进]",
       "concepts": [
         {"name": "为什么迁移", "detail": "create_all 只建新表不改旧表；迁移 = 可版本化、可回滚的表结构变更脚本。"},
         {"name": "核心三步", "detail": "alembic init 初始化 → revision --autogenerate 生成变更 → upgrade head 应用；downgrade 回退。"},

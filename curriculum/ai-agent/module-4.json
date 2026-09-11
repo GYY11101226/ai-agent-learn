@@ -8,6 +8,7 @@
       "id": "4.1",
       "title": "Agent 范式演进",
       "goal": "掌握 ReAct / Plan-and-Execute / ReWOO / Reflexion 四种范式及适用场景",
+      "diagram": "flowchart TD\n  A[\"ReAct: 思考\"] --> B[行动]\n  B --> C[观察]\n  C --> A\n  D[\"Plan: 先完整规划\"] --> E[逐步执行]\n  F[\"Reflexion: 执行\"] --> G[反思]\n  G --> H[修正]\n  H --> F",
       "concepts": [
         {"name": "ReAct", "detail": "边想边做，交替输出思考+行动，最通用，模块2的循环就是其骨架。"},
         {"name": "Plan-and-Execute", "detail": "先列完整计划再逐步执行，适合可预先拆解的任务。"},
@@ -22,6 +23,7 @@
       "id": "4.2",
       "title": "规划与反思",
       "goal": "实现任务分解与 Critic 自评，输出通过/需修改/重试判断",
+      "diagram": "flowchart TD\n  A[目标] --> B[拆解子任务清单]\n  B --> C[逐个执行]\n  C --> D[检查完成度]\n  D --> E{有偏差?}\n  E -->|是| F[修正计划]\n  F --> C\n  E -->|否| G[目标达成]",
       "concepts": [
         {"name": "规划", "detail": "复杂任务先拆子任务逐个击破，每步可验证。"},
         {"name": "反思 Critic", "detail": "模型执行后问自己「结果对不对」，输出通过/需修改/重试。"},
@@ -36,6 +38,7 @@
       "id": "4.3",
       "title": "多智能体协作",
       "goal": "掌握 Planner-Executor-Critic 与 Orchestrator-Worker 等协作模式",
+      "diagram": "flowchart TD\n  A[\"主控 agent 收任务\"] --> B[\"专家1: 独立 agentic loop\"]\n  A --> C[\"专家2: 独立 agentic loop\"]\n  A --> D[\"专家3: 独立 agentic loop\"]\n  B --> E[汇总结果]\n  C --> E\n  D --> E\n  E --> F[\"主控校验合并\"]",
       "concepts": [
         {"name": "经典模式", "detail": "Planner→Executor→Critic 分离；Orchestrator→Worker 分发子任务；辩论多视角取稳。"},
         {"name": "独立上下文", "detail": "每个 Agent 跑在独立上下文，互不干扰。"},
@@ -50,6 +53,7 @@
       "id": "4.4",
       "title": "工具系统与安全",
       "goal": "用白名单、权限、审计给工具加安全边界",
+      "diagram": "flowchart TD\n  A[输入] --> B{权限白名单?}\n  B -->|通过| C{高危操作?}\n  C -->|是| D[\"先 dry-run 确认\"]\n  D --> E[执行]\n  C -->|否| E\n  E --> F[写审计日志]\n  B -->|拒绝| G[拦截]",
       "concepts": [
         {"name": "白名单", "detail": "允许调用的操作列成清单，清单外一律拒绝。"},
         {"name": "危险操作拦截", "detail": "删文件、发网络请求、执行命令需确认或审计日志。"},

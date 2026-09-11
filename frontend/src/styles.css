@@ -258,3 +258,49 @@ button:disabled {
 .state.error button {
   margin-top: 12px;
 }
+/* ---------- 课程配图与动画 ---------- */
+.mermaid-box {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+.mermaid-box svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.animation-box {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.animation-box svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.anim-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+.anim-controls label {
+  font-size: 14px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.anim-controls input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+.anim-caption {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+}

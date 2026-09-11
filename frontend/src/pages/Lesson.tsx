@@ -33,7 +33,11 @@ export default function Lesson() {
     <>
       <h1>{data!.chapter.title}</h1>
       <p className="muted">{data!.chapter.goal}</p>
-      <LessonView content={data!.lesson} />
+      <LessonView
+        content={data!.lesson}
+        diagram={data!.chapter.diagram}
+        animation={data!.chapter.animation}
+      />
       <p className="actions">
         <button onClick={goQuiz} disabled={marking}>
           {marking ? '登记中…' : '学完了，去测验 →'}

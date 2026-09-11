@@ -8,6 +8,7 @@
       "id": "0.1",
       "title": "什么是 Agent",
       "goal": "能说清 Agent = LLM + 工具 + 循环 + 记忆，并区分它与 chatbot / workflow / RAG",
+      "diagram": "flowchart LR\n  A[用户目标] --> B[\"LLM 思考\"]\n  B --> C{需要工具?}\n  C -->|是| D[调用工具]\n  D --> E[观察结果]\n  E --> B\n  C -->|否| F[\"最终回答 = 目标达成\"]",
       "concepts": [
         {"name": "Agent 定义", "detail": "把一个只会聊天的大模型，加上能做事的手（工具）、能自己决定下一步的大脑（循环）、和跨会话记住的东西（记忆）。"},
         {"name": "四类系统对比", "detail": "Chatbot 一问一答不调工具；Workflow 步骤由代码写死；RAG 是检索→生成两步；Agent 会自己决定下一步直到目标达成。"},
@@ -22,6 +23,7 @@
       "id": "0.2",
       "title": "LLM 基础速通",
       "goal": "理解 token、消息角色、关键参数，知道为什么 API 是无状态的",
+      "diagram": "flowchart LR\n  A[prompt] --> B[\"tokenizer 切分\"]\n  B --> C[\"模型逐 token 预测\"]\n  C --> D[概率分布]\n  D --> E[采样]\n  E --> F[拼接输出]\n  F --> C\n  G[\"上下文 = 有限滑动窗口\"]",
       "concepts": [
         {"name": "Token", "detail": "模型读写的最小单位，按 token 计费；一个汉字约 1-2 token。"},
         {"name": "三个消息角色", "detail": "system（设定行为）、user（输入）、assistant（回复）；多轮对话 = 历史全量重发，API 无状态。"},
@@ -36,6 +38,7 @@
       "id": "0.3",
       "title": "环境搭建与第一个调用",
       "goal": "装好 anthropic SDK，跑通第一个 messages.create，会用环境变量管理密钥",
+      "diagram": "flowchart LR\n  A[\"pip install anthropic\"] --> B[\"设置 ANTHROPIC_API_KEY\"]\n  B --> C[\"client.messages.create\"]\n  C --> D[\"解析响应 content\"]\n  D --> E[看 stop_reason]",
       "concepts": [
         {"name": "安装与密钥", "detail": "pip install anthropic；密钥走 ANTHROPIC_API_KEY 环境变量，绝不硬编码进代码。"},
         {"name": "最小调用", "detail": "client.messages.create(model, max_tokens, messages) 返回内容在 response.content 里。"},
@@ -50,6 +53,7 @@
       "id": "0.4",
       "title": "能力成熟度 L0-L4",
       "goal": "记住 L0-L4 五层成熟度，能判断一个系统处于哪一层",
+      "diagram": "flowchart LR\n  A[\"L0 单次调用\"] --> B[\"L1 单 Agent+循环\"]\n  B --> C[\"L2 规划+反思\"]\n  C --> D[\"L3 上下文工程: 记忆/RAG\"]\n  D --> E[\"L4 生产级 Harness\"]",
       "concepts": [
         {"name": "L0-L4 定义", "detail": "L0 单次调用；L1 单 Agent + 循环；L2 规划+反思；L3 上下文工程（记忆/RAG）；L4 生产级 Harness。"},
         {"name": "本课程对照", "detail": "模块2到 L1、模块4到 L2、模块3到 L3、模块5到 L4。"},

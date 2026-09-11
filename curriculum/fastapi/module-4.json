@@ -8,6 +8,7 @@
       "id": "4.1",
       "title": "依赖注入 Depends 深入",
       "goal": "会嵌套依赖、理解依赖缓存，会「类作为依赖」并识别依赖的典型场景",
+      "diagram": "flowchart TD\n  A[依赖函数] --> B[注入路由参数]\n  B --> C[依赖嵌套依赖]\n  C --> D{同一请求再次调用?}\n  D -->|是| E[缓存结果直接复用]\n  D -->|否| F[首次执行并缓存]\n  F --> E",
       "concepts": [
         {"name": "嵌套与缓存", "detail": "依赖可以再依赖别的依赖（如鉴权依赖里用 get_db）；同一请求内默认只执行一次（use_cache）。"},
         {"name": "类即依赖", "detail": "任何 callable 都能当依赖：函数、类、闭包皆可——类依赖常用来打包一组查询参数。"},
@@ -22,6 +23,7 @@
       "id": "4.2",
       "title": "中间件与生命周期",
       "goal": "会写 HTTP 中间件做计时/日志，会用 lifespan 管理启停资源",
+      "diagram": "flowchart TD\n  A[请求] --> B[\"middleware 前置逻辑\"]\n  B --> C[路由处理]\n  C --> D[\"后置: 计时/加响应头\"]\n  D --> E[响应]\n  F[\"lifespan 启动建连接\"] --> A\n  E --> G[\"lifespan 关闭清理\"]",
       "concepts": [
         {"name": "中间件", "detail": "包在所有路由外的洋葱层：请求进、响应出都能加工——计时、加 header、记录日志。"},
         {"name": "lifespan", "detail": "async with 上下文：启动时建连接池、退出时关资源，取代旧的 on_event 写法。"},
@@ -36,6 +38,7 @@
       "id": "4.3",
       "title": "认证：OAuth2 + JWT",
       "goal": "走通「密码换 token → 受保护接口校验 token」的最小闭环",
+      "diagram": "flowchart LR\n  A[\"登录: 校验密码 hash\"] --> B{通过?}\n  B -->|是| C[签发 JWT]\n  C --> D[\"客户端携带 Bearer token\"]\n  D --> E[\"Depends 校验签名\"]\n  E --> F[放行受保护路由]\n  B -->|否| G[\"401 拒绝\"]",
       "concepts": [
         {"name": "OAuth2 Password 流", "detail": "/token 接口用用户名密码换 access_token，之后每个请求带 Authorization: Bearer 头。"},
         {"name": "JWT 结构", "detail": "header.payload.signature 三段；签名防篡改，payload 里的 exp 控制有效期——注意 JWT 是签名不是加密。"},
@@ -50,6 +53,7 @@
       "id": "4.4",
       "title": "错误处理与全局异常",
       "goal": "会抛 HTTPException，会定义业务异常类并用 exception_handler 统一映射",
+      "diagram": "flowchart TD\n  A[代码抛异常] --> B{HTTPException?}\n  B -->|是| C[JSON 错误响应]\n  B -->|否| D[\"全局 exception handler 兜底\"]\n  D --> E[统一错误格式响应]",
       "concepts": [
         {"name": "HTTPException", "detail": "detail 是给调用方的说明，可携带结构化信息；不抛它而让异常裸奔会变成 500。"},
         {"name": "自定义异常", "detail": "定义 NotFound/Conflict 等业务异常 + @app.exception_handler，把异常映射成统一的响应结构。"},
@@ -64,6 +68,7 @@
       "id": "4.5",
       "title": "后台任务与 WebSocket",
       "goal": "会用 BackgroundTasks 异步收尾，理解 WebSocket 与 HTTP 的本质差异",
+      "diagram": "flowchart TD\n  A[请求] --> B[\"立即返回 202 Accepted\"]\n  B --> C[\"BackgroundTasks 后台继续执行\"]\n  D[WebSocket 连接] --> E[握手升级]\n  E --> F[双向帧通信]",
       "concepts": [
         {"name": "BackgroundTasks", "detail": "响应返回后再执行慢活（发邮件、写日志）；进程重启任务会丢，重任务要上真消息队列。"},
         {"name": "WebSocket", "detail": "全双工长连接：一次握手后服务端可主动推送，适合聊天、进度推送等场景。"},

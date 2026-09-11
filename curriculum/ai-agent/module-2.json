@@ -8,6 +8,7 @@
       "id": "2.1",
       "title": "为什么 LLM 需要工具",
       "goal": "理解工具调用解决的问题，说清模型在工具调用中的真实角色",
+      "diagram": "flowchart LR\n  A[\"不能精确算术\"] --> D[工具补足]\n  B[\"不知道实时信息\"] --> D\n  C[\"不能操作文件\"] --> D\n  D --> E[\"LLM+工具 = 手眼脑\"]",
       "concepts": [
         {"name": "模型的局限", "detail": "知识有截止、不能执行、不能查实时数据——工具给它「手」。"},
         {"name": "意图 vs 执行", "detail": "模型只输出「调用哪个工具、传什么参数」这个意图，你的代码才真正执行。"},
@@ -22,6 +23,7 @@
       "id": "2.2",
       "title": "工具 schema 设计",
       "goal": "写好 name / description / input_schema，让模型知道怎么用工具",
+      "diagram": "flowchart LR\n  A[功能描述] --> B[\"name+description+parameters\"]\n  B --> C[\"LLM 读 schema 理解\"]\n  C --> D[\"生成正确调用参数\"]",
       "concepts": [
         {"name": "description 是写给人(模型)看的说明", "detail": "说清什么场景用、参数什么意思、返回什么，写差了模型就用错。"},
         {"name": "input_schema 是参数契约", "detail": "类型、枚举、必填；可选 strict: True 强制精确校验。"}
@@ -35,6 +37,7 @@
       "id": "2.3",
       "title": "手写 Agent 循环",
       "goal": "从零写出 调用→决定工具→执行→喂回→直到完成 的循环",
+      "diagram": "flowchart TD\n  A[\"用户消息进 messages\"] --> B{\"LLM 返回 tool_use?\"}\n  B -->|是| C[解析工具名+参数]\n  C --> D[执行工具]\n  D --> E[\"结果作为 tool_result 回填 messages\"]\n  E --> B\n  B -->|否| F[\"stop_reason=end → 输出最终回答\"]",
       "concepts": [
         {"name": "stop_reason 是循环开关", "detail": "tool_use=模型想用工具继续循环；end_turn=完成退出。"},
         {"name": "tool_use 块", "detail": "藏 name（哪个工具）和 input（参数），execute_tool 据此执行。"},
@@ -49,6 +52,7 @@
       "id": "2.4",
       "title": "工具错误处理",
       "goal": "工具失败时 Agent 不崩、能自纠，并防死循环",
+      "diagram": "flowchart TD\n  A[调用工具] --> B{成功?}\n  B -->|是| C[结果回填]\n  B -->|否| D[\"错误信息也回填 LLM\"]\n  D --> E[\"LLM 重试或换方法\"]\n  E --> A\n  E --> F{多次失败?}\n  F -->|是| G[\"兜底降级\"]",
       "concepts": [
         {"name": "is_error 标记", "detail": "工具失败返回 is_error=True 而非 throw，模型会解释或换参数重试。"},
         {"name": "防死循环", "detail": "给循环加最大轮数上限，超了强制结束并报告。"},

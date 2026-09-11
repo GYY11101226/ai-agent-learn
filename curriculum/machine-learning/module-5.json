@@ -8,6 +8,7 @@
       "id": "5.1",
       "title": "PyTorch 入门",
       "goal": "会用 Tensor、autograd、Dataset/DataLoader 写训练循环",
+      "diagram": "flowchart TD\n  A[\"tensor 运算\"] --> B[\"autograd 记录计算图\"]\n  B --> C[\"loss.backward() 求梯度\"]\n  C --> D[\"optimizer.step() 更新\"]\n  D --> E[\"optimizer.zero_grad() 清零\"]\n  E --> A",
       "concepts": [
         {"name": "Tensor 与 autograd", "detail": "Tensor 是带 GPU 能力、可求导的数组。requires_grad=True 的张量会被自动记录计算图，loss.backward() 一次求出所有参数梯度，不用手写反向传播。"},
         {"name": "Dataset / DataLoader", "detail": "Dataset 定义「怎么取一条数据」，DataLoader 负责自动批处理、打乱、多线程加载。告别手写 mini-batch。"},
@@ -22,6 +23,8 @@
       "id": "5.2",
       "title": "CNN 卷积神经网络",
       "goal": "理解卷积/池化如何提取空间特征与共享权重",
+      "diagram": "flowchart TD\n  A[输入图] --> B[\"卷积层提取特征图\"]\n  B --> C[\"池化降采样\"]\n  C -->|堆叠| B\n  C --> D[展平]\n  D --> E[全连接]\n  E --> F[\"softmax 分类\"]\n  G[\"卷积核权重共享\"] --- B",
+      "animation": "convolution",
       "concepts": [
         {"name": "卷积", "detail": "一个小的滤波器（如 3×3）在图上滑动，每个位置做加权和，检测边缘、纹理等局部模式。同一滤波器扫全图 = 权重共享，参数量骤减。"},
         {"name": "池化", "detail": "max-pool 取局部最大值做下采样，减少计算量、增加平移不变性（图里物体挪一点位置，输出差不多）。"},
@@ -36,6 +39,7 @@
       "id": "5.3",
       "title": "RNN/LSTM 与序列建模",
       "goal": "理解序列建模与梯度消失，以及 LSTM 门控如何缓解",
+      "diagram": "flowchart TD\n  A[\"序列 x₁ … xₜ\"] --> B[\"hₜ = f(xₜ, hₜ₋₁) 逐步递推\"]\n  B --> C[输出]\n  B --> D{\"长期依赖记不住?\"}\n  D -->|是| E[\"LSTM 门控\"]\n  E --> F[\"遗忘门 / 输入门 / 输出门\"]",
       "concepts": [
         {"name": "RNN", "detail": "隐藏状态在时间步之间循环传递：每一步吃「当前输入 + 上一时刻状态」，输出更新后的状态。天然适合序列（文本、语音、时间序列）。"},
         {"name": "梯度消失/爆炸", "detail": "反向传播要沿着时间步连乘，几十步之后梯度趋近 0（消失）或爆炸，长序列学不到远期依赖——RNN 记不住太早的信息。"},
@@ -50,6 +54,7 @@
       "id": "5.4",
       "title": "Transformer 与注意力",
       "goal": "理解自注意力、多头，以及为何取代 RNN",
+      "diagram": "flowchart TD\n  A[\"词嵌入 + 位置编码\"] --> B[\"自注意力 Q·Kᵀ/√d\"]\n  B --> C[\"softmax 得权重\"]\n  C --> D[\"加权求和 V\"]\n  D --> E[\"多头并行\"]\n  E --> F[\"前馈层\"]\n  F --> B",
       "concepts": [
         {"name": "注意力", "detail": "每个位置用 Query 和所有位置的 Key 算相似度，softmax 后加权求 Value。任意两个位置（哪怕隔很远）能直接交互，不用像 RNN 一步步传。"},
         {"name": "自注意力 + 多头", "detail": "自注意力 = 序列内部互相 attend（Q/K/V 都来自同一序列）；多头 = 并行做多组注意力，每组学不同的关系，再拼接。"},
@@ -64,6 +69,7 @@
       "id": "5.5",
       "title": "训练调优与部署",
       "goal": "掌握 dropout/BN/迁移学习，知道模型怎么上线",
+      "diagram": "flowchart TD\n  A[训练完成] --> B{\"过拟合?\"}\n  B -->|是| C[\"正则化 / 数据增强 / 学习率调度\"]\n  C --> A\n  B -->|否| D[\"验证达标\"]\n  D --> E[\"导出 ONNX\"]\n  E --> F[\"部署为推理 API\"]",
       "concepts": [
         {"name": "dropout 与 BatchNorm", "detail": "dropout 训练时随机丢弃一部分神经元，逼网络不过度依赖某几个，防过拟合；BatchNorm 对每层输出归一化，让训练更稳、可用更大学习率。"},
         {"name": "迁移学习", "detail": "预训练模型已在海量数据上学好通用特征，你只需冻结底层、微调顶层，几万条数据也能训出好模型。小数据场景的第一选择。"},

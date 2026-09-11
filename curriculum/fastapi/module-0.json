@@ -8,6 +8,7 @@
       "id": "0.1",
       "title": "什么是 Web 框架：从 HTTP 说起",
       "goal": "能说清「HTTP 请求 → 路由匹配 → 处理函数 → 响应」的完整链路，以及框架帮你做了什么",
+      "diagram": "flowchart LR\n  A[浏览器] --> B[\"HTTP 请求: 方法+路径+头+体\"]\n  B --> C[服务器处理]\n  C --> D[\"HTTP 响应: 状态码+体\"]\n  D --> A",
       "concepts": [
         {"name": "HTTP 请求与响应", "detail": "客户端发请求（方法 + 路径 + 数据），服务端回响应（状态码 + 数据）；HTTP 无状态，每次请求相互独立。"},
         {"name": "路由的本质", "detail": "一张「URL 模式 + HTTP 方法 → 处理函数」的映射表；框架收到请求后查表分发到你的函数。"},
@@ -22,6 +23,7 @@
       "id": "0.2",
       "title": "为什么是 FastAPI",
       "goal": "能从类型系统、异步、自动文档三个角度说清 FastAPI 与 Flask/Django 的差异",
+      "diagram": "flowchart TD\n  A[\"裸 ASGI: 手写路由/解析/序列化\"] --> B[\"FastAPI: 框架代劳\"]\n  B --> C[\"类型标注 → 自动校验+转换\"]\n  B --> D[\"原生 async: 高并发 IO\"]\n  B --> E[\"自动文档: /docs + /redoc\"]",
       "concepts": [
         {"name": "类型即契约", "detail": "参数和模型用 Python 类型标注声明，FastAPI 据此自动校验、转换并生成文档——声明一次，三处受益。"},
         {"name": "原生异步", "detail": "基于 ASGI（Starlette），async 路由在高并发 IO 场景吞吐显著高于同步 WSGI 框架。"},
@@ -36,6 +38,7 @@
       "id": "0.3",
       "title": "环境搭建与第一个应用",
       "goal": "独立完成 安装 fastapi + uvicorn → 写最小应用 → 启动 → 打开 /docs 的全流程",
+      "diagram": "flowchart LR\n  A[\"uvicorn 启动服务\"] --> B[\"FastAPI() 实例\"]\n  B --> C[\"@app.get 注册路由\"]\n  C --> D[函数即处理逻辑]\n  D --> E[\"/docs 自动文档\"]",
       "concepts": [
         {"name": "安装与启动", "detail": "pip install fastapi uvicorn[standard]；uvicorn main:app --reload 启动，--reload 改代码自动重启。"},
         {"name": "装饰器路由", "detail": "@app.get('/path') 把函数注册为 GET 处理器；函数返回值自动序列化为 JSON。"},
@@ -50,6 +53,7 @@
       "id": "0.4",
       "title": "异步速通：async/await 与事件循环",
       "goal": "理解事件循环和协程，知道什么时候用 async def、什么时候用普通 def",
+      "diagram": "flowchart TD\n  A[请求进入事件循环] --> B{遇到 await IO?}\n  B -->|是| C[让出控制权]\n  C --> D[事件循环处理其它请求]\n  D --> B\n  B -->|IO 完成| E[恢复继续执行]\n  F[同步写法] --> G[\"阻塞: 请求排队\"]",
       "concepts": [
         {"name": "事件循环", "detail": "单线程调度器，遇到 await 就切去执行别的任务；适合 IO 密集（等网络/磁盘），不适合 CPU 密集。"},
         {"name": "async def 路由", "detail": "路由函数可声明为 async def，内部 await 异步操作时不会阻塞整个服务。"},

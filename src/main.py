@@ -151,7 +151,13 @@ def lesson(course_id: str, chapter_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"调用 LLM 失败：{e}")
     return {
-        "chapter": {"id": ch["id"], "title": ch["title"], "goal": ch.get("goal", "")},
+        "chapter": {
+            "id": ch["id"],
+            "title": ch["title"],
+            "goal": ch.get("goal", ""),
+            "diagram": ch.get("diagram", ""),
+            "animation": ch.get("animation", ""),
+        },
         "lesson": result.model_dump(),
     }
 

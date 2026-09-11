@@ -8,6 +8,7 @@
       "id": "1.1",
       "title": "结构化 Prompt",
       "goal": "设计含 Role / Task / Constraints / Output Format 四部分的可复用提示词",
+      "diagram": "flowchart TD\n  A[角色] --> F[\"影响模型的注意力方向\"]\n  B[任务] --> F\n  C[上下文] --> F\n  D[输出格式] --> F\n  E[约束] --> F",
       "concepts": [
         {"name": "为什么要结构化", "detail": "模型输出对措辞极敏感，把「你是谁/干嘛/限制/输出格式」分开写，可复现可维护。"},
         {"name": "四要素", "detail": "Role（角色）、Task（任务）、Constraints（约束）、Output Format（输出格式，尽量 JSON）。"},
@@ -22,6 +23,7 @@
       "id": "1.2",
       "title": "Few-shot 与 CoT",
       "goal": "用示例和推理步骤把难任务变成稳定任务",
+      "diagram": "flowchart TD\n  A[\"Few-shot 示例\"] --> B[新问题]\n  B --> C[\"模仿示例格式推理\"]\n  C --> D[答案]\n  E[问题] --> F[\"CoT 先分步思考\"]\n  F --> G[\"再给答案\"]",
       "concepts": [
         {"name": "Few-shot", "detail": "给 1-3 个「输入→正确输出」示例，且要覆盖简单/中等/难三个难度。"},
         {"name": "CoT 思维链", "detail": "要求先逐步思考再给结论，用 Step 1 / Step 2 格式，大幅提升多步推理正确率。"},
@@ -36,6 +38,7 @@
       "id": "1.3",
       "title": "输出约束与结构化输出",
       "goal": "用结构化输出 API 让模型返回可直接消费的数据，而非「像 JSON 的文本」",
+      "diagram": "flowchart TD\n  A[需求] --> B[\"定义 JSON Schema\"]\n  B --> C[强制工具调用]\n  C --> D[结构化数据]\n  D --> E{校验通过?}\n  E -->|否| F[\"带错误重试\"]\n  F --> C\n  E -->|是| G[下游直接使用]",
       "concepts": [
         {"name": "不要赌提示词", "detail": "「请你返回 JSON」不可靠，要用结构化输出 API 硬约束格式。"},
         {"name": "messages.parse", "detail": "传 Pydantic 模型，返回的 parsed_output 已是校验过的对象，字段错会直接报错。"},
@@ -50,6 +53,7 @@
       "id": "1.4",
       "title": "Prompt 评测",
       "goal": "能回答「prompt 到底改好了没有」，会造评测集",
+      "diagram": "flowchart TD\n  A[测试集] --> B[\"跑 prompt v1/v2/v3\"]\n  B --> C[\"逐例打分: 规则或 LLM 裁判\"]\n  C --> D[汇总对比]\n  D --> E[选最优]\n  E --> B",
       "concepts": [
         {"name": "造评测集", "detail": "10-20 题，每题标注期望输出，改前后各跑一遍比一致率和正确率。"},
         {"name": "金句", "detail": "没有评测集的 prompt 调优等于闭眼开车。"},
