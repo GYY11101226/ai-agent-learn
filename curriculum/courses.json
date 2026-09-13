@@ -16,5 +16,11 @@
     "title": "机器学习 从入门到精通",
     "description": "从线性回归到 Transformer，numpy 手写核心 + sklearn/PyTorch 实战的渐进式课程",
     "dir": "machine-learning"
+  },
+  {
+    "id": "docker",
+    "title": "Docker 从入门到精通",
+    "description": "从镜像、构建到网络、数据与 Compose，边做边学容器化",
+    "dir": "docker"
   }
 ]

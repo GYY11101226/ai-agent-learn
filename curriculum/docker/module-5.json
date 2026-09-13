@@ -1,0 +1,83 @@
+{
+  "id": "module-5",
+  "title": "Compose 与生产化",
+  "weeks": "第6周",
+  "prerequisites": "上完模块 2-4",
+  "chapters": [
+    {
+      "id": "5.1",
+      "title": "多容器应用与 docker compose",
+      "goal": "理解 compose 解决单机多容器编排的问题",
+      "diagram": "flowchart LR\n  A[\"web + db + redis 多容器\"] --> B[\"一个 compose.yml 声明\"]\n  B -->|docker compose up| C[\"一键起全部\"]\n  C --> D[\"可复现、进版本控制\"]",
+      "concepts": [
+        {"name": "痛点", "detail": "多容器应用要用一堆 docker run 加网络手工串联，易错难复现。"},
+        {"name": "compose", "detail": "一个 compose.yml 声明所有服务、网络、卷，docker compose up 一键起。"},
+        {"name": "声明式", "detail": "环境可复现，团队共享同一配置，天然进版本控制。"}
+      ],
+      "code": "services:\n  web:\n    image: nginx\n  db:\n    image: postgres:16",
+      "todo": "",
+      "exercise": "列举手工 run 起 web+db 要做的步骤，对比 compose 一行 up 的差别。",
+      "quiz_topics": ["compose 定位", "多容器编排", "声明式配置"]
+    },
+    {
+      "id": "5.2",
+      "title": "compose 文件结构",
+      "goal": "读懂并编写 services / networks / volumes 三段式 compose 文件",
+      "diagram": "flowchart TD\n  A[compose.yml] --> B[services 服务定义]\n  A --> C[networks 网络]\n  A --> D[volumes 数据卷]\n  B --> E[\"up -d 后台启动\"]",
+      "concepts": [
+        {"name": "services", "detail": "定义各容器（镜像、构建、端口、环境、卷）。"},
+        {"name": "networks / volumes", "detail": "顶层声明网络与卷，供服务引用。"},
+        {"name": "常用命令", "detail": "up -d 后台起、down 停并清理、ps 看状态。"}
+      ],
+      "code": "services:\n  web:\n    image: nginx\n    ports: [\"8080:80\"]\n    networks: [app]\n  db:\n    image: postgres:16\n    volumes: [dbdata:/var/lib/postgresql/data]\nnetworks:\n  app:\nvolumes:\n  dbdata:",
+      "todo": "",
+      "exercise": "写一个 web+db 的 compose 文件并 up -d 验证。",
+      "quiz_topics": ["services 段", "networks/volumes 段", "up/down"]
+    },
+    {
+      "id": "5.3",
+      "title": "环境变量、depends_on 与 healthcheck",
+      "goal": "用环境变量、启动顺序与健康检查让 compose 编排更可靠",
+      "diagram": "flowchart LR\n  A[\"environment 注入配置\"] --> B[\"depends_on 控制顺序\"]\n  B --> C[\"healthcheck 健康检查\"]\n  C --> D[\"condition: service_healthy\"]\n  D --> E[\"真正等就绪后再启动\"]",
+      "concepts": [
+        {"name": "environment / env_file", "detail": "注入配置，避免硬编码密码。"},
+        {"name": "depends_on", "detail": "控制启动顺序，但只等「启动」不等「就绪」。"},
+        {"name": "healthcheck", "detail": "定义健康检查，配合 condition: service_healthy 真正等就绪。"}
+      ],
+      "code": "services:\n  db:\n    image: postgres:16\n    healthcheck:\n      test: [\"CMD\", \"pg_isready\"]\n  web:\n    depends_on:\n      db:\n        condition: service_healthy",
+      "todo": "",
+      "exercise": "给 db 加 healthcheck，让 web 用 condition 等 db 就绪再启动。",
+      "quiz_topics": ["环境变量注入", "depends_on", "healthcheck"]
+    },
+    {
+      "id": "5.4",
+      "title": "资源限制与日志监控",
+      "goal": "用资源限额与 logs / stats 做基础运维观测",
+      "diagram": "flowchart LR\n  A[\"--cpus / --memory 限额\"] --> B[\"防单容器拖垮宿主\"]\n  C[\"docker logs 看输出\"] --> D[\"docker stats 看资源\"]\n  B --> D",
+      "concepts": [
+        {"name": "资源限制", "detail": "--cpus、--memory 限制容器 CPU/内存，防单容器拖垮宿主。"},
+        {"name": "logs", "detail": "看容器标准输出/错误，-f 实时跟踪、--tail 看尾部。"},
+        {"name": "stats", "detail": "实时看各容器 CPU/内存/网络/IO 占用。"}
+      ],
+      "code": "docker run --cpus=0.5 --memory=512m nginx\ndocker stats",
+      "todo": "",
+      "exercise": "给容器设 256m 内存上限，用 stats 观察，再试超过上限的行为。",
+      "quiz_topics": ["--cpus/--memory", "docker logs", "docker stats"]
+    },
+    {
+      "id": "5.5",
+      "title": "镜像安全与最佳实践清单",
+      "goal": "按清单做镜像瘦身与安全加固",
+      "diagram": "flowchart LR\n  A[\"最小基础镜像 alpine\"] --> B[\"以非 root 运行 USER\"]\n  B --> C[\"镜像扫描漏洞\"]\n  C --> D[\"单进程 / .dockerignore\"]\n  D --> E[\"生产级镜像\"]",
+      "concepts": [
+        {"name": "最小基线", "detail": "用 alpine、scratch 等最小基础镜像减少攻击面。"},
+        {"name": "非 root 运行", "detail": "USER 指令降权，防容器逃逸风险。"},
+        {"name": "扫描与单进程", "detail": "用扫描工具查漏洞，一个容器一个进程。"}
+      ],
+      "code": "FROM alpine\nRUN adduser -D appuser\nUSER appuser\nCMD [\"app\"]",
+      "todo": "",
+      "exercise": "列出一份不少于 5 条的镜像最佳实践清单并说明每条动机。",
+      "quiz_topics": ["最小基础镜像", "非 root 运行", "镜像扫描"]
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "id": "module-4",
+  "title": "数据管理",
+  "weeks": "第5周",
+  "prerequisites": "上完模块 3",
+  "chapters": [
+    {
+      "id": "4.1",
+      "title": "bind mount：宿主机目录直挂",
+      "goal": "用 bind mount 把宿主机目录挂进容器实现双向同步",
+      "diagram": "flowchart LR\n  A[\"宿主机目录 /home/user/app\"] <-->|双向同步| B[\"容器路径 /app\"]\n  B --> C[\"开发期改代码即生效\"]",
+      "concepts": [
+        {"name": "bind mount", "detail": "把宿主绝对路径挂到容器指定路径，两侧实时同步。"},
+        {"name": "适用场景", "detail": "开发期热更（改代码容器即生效）、共享配置文件。"},
+        {"name": "语法", "detail": "-v /host/path:/container/path，宿主路径必须是绝对路径。"}
+      ],
+      "code": "docker run -v $(pwd):/app -p 8080:80 nginx\n# 本地改静态文件，容器立即可见",
+      "todo": "",
+      "exercise": "bind mount 挂一个本地目录进 nginx，改文件验证双向同步。",
+      "quiz_topics": ["bind mount", "-v 语法", "开发热更"]
+    },
+    {
+      "id": "4.2",
+      "title": "volume：具名卷与持久化",
+      "goal": "理解具名卷的持久化语义及与 bind mount 的区别",
+      "diagram": "flowchart TD\n  A[\"具名卷 mydata\"] <--> B[\"容器 /data\"]\n  B --> C[\"容器写数据进卷\"]\n  C --> D[\"容器被删\"]\n  D --> E[\"卷仍在，数据不丢\"]\n  E --> F[\"新容器挂同卷\"]",
+      "animation": "volume",
+      "concepts": [
+        {"name": "volume", "detail": "docker 托管的存储，独立于容器生命周期，删容器数据还在。"},
+        {"name": "具名卷", "detail": "-v myvol:/data，由 docker 管理路径，可跨容器共享、复用。"},
+        {"name": "对比 bind mount", "detail": "volume 可移植、由 docker 管理，是持久化的推荐方式。"}
+      ],
+      "code": "docker volume create mydata\ndocker run -v mydata:/data alpine\n# 删容器后 volume 与数据仍在",
+      "todo": "",
+      "exercise": "建具名卷、写入数据、删容器、新容器挂同卷验证数据仍在。",
+      "quiz_topics": ["volume 持久化", "具名卷", "volume vs bind mount"]
+    },
+    {
+      "id": "4.3",
+      "title": "挂载的坑",
+      "goal": "识别挂载常见三类坑并规避",
+      "diagram": "flowchart TD\n  A{挂载场景} -->|路径写错| B[\"默默新建空 volume\"]\n  A -->|挂到已有路径| C[\"遮蔽镜像原内容\"]\n  A -->|权限不匹配| D[\"uid/gid 读写失败\"]",
+      "concepts": [
+        {"name": "路径写错", "detail": "-v 写相对路径或宿主路径不存在，会被当作 volume 名默默新建，不报错。"},
+        {"name": "覆盖坑", "detail": "挂载到镜像内已有文件/目录的路径，会遮蔽镜像原内容。"},
+        {"name": "权限坑", "detail": "容器内 uid 与宿主文件权限不匹配，导致读写失败。"}
+      ],
+      "code": "# 常见错误：相对路径被当成 volume 名\ndocker run -v ./data:/app/data alpine",
+      "todo": "",
+      "exercise": "复现「挂空卷遮蔽镜像内 nginx 默认首页」并说明为何。",
+      "quiz_topics": ["挂载路径坑", "覆盖遮蔽", "权限 uid/gid"]
+    },
+    {
+      "id": "4.4",
+      "title": "备份恢复与数据卷迁移",
+      "goal": "掌握卷数据备份、恢复与迁移的方法",
+      "diagram": "flowchart LR\n  A[\"卷 mydata\"] --> B[\"临时容器 tar 打包\"]\n  B --> C[\"备份文件 mydata.tgz\"]\n  C --> D[新环境恢复]\n  D --> E[\"解包回新卷\"]",
+      "concepts": [
+        {"name": "备份", "detail": "用一个临时容器挂卷，把数据 tar 打包到宿主机。"},
+        {"name": "恢复", "detail": "把 tar 解包回新卷。"},
+        {"name": "迁移", "detail": "数据卷可跨主机迁移，备份归档后拷到新机恢复。"}
+      ],
+      "code": "docker run --rm -v mydata:/data -v $(pwd):/backup alpine tar czf /backup/mydata.tgz -C /data .",
+      "todo": "",
+      "exercise": "用 tar 备份一个卷，删卷后从 tar 恢复并验证数据。",
+      "quiz_topics": ["卷备份", "卷恢复", "跨主机迁移"]
+    }
+  ]
+}

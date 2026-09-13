@@ -1,0 +1,68 @@
+{
+  "id": "module-0",
+  "title": "预备：容器心智模型",
+  "weeks": "第1周",
+  "prerequisites": "会基础 Linux 命令与 Python 即可",
+  "chapters": [
+    {
+      "id": "0.1",
+      "title": "容器 vs 虚拟机：共享内核",
+      "goal": "能说清容器与虚拟机的本质区别（是否共享宿主内核）及各自资源开销",
+      "diagram": "flowchart TD\n  A[\"虚拟机: 应用 + 完整 Guest OS\"] --> B[Hypervisor 虚拟层]\n  B --> C[宿主内核/硬件]\n  D[\"容器: 应用 + 依赖\"] --> E[共享宿主内核]\n  E --> C",
+      "concepts": [
+        {"name": "虚拟机", "detail": "Hypervisor 之上每个实例跑完整 Guest OS，隔离强但开销大。"},
+        {"name": "容器", "detail": "所有容器共享宿主内核，只隔离用户空间（进程/文件/网络），轻量秒启。"},
+        {"name": "隔离差异", "detail": "VM 强隔离适合多租户，容器共享内核适合高密度部署。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "对比说明：同一台 4G 内存宿主机，能跑 5 个 Ubuntu 虚拟机却跑几十个容器的原因。",
+      "quiz_topics": ["虚拟机与容器区别", "共享内核", "隔离与开销权衡"]
+    },
+    {
+      "id": "0.2",
+      "title": "Docker 解决什么问题",
+      "goal": "能说出 Docker 解决「环境漂移」的核心价值与「一次构建处处运行」的含义",
+      "diagram": "flowchart LR\n  A[\"代码 + 依赖 + 配置\"] --> B[\"打包成镜像\"]\n  B --> C[开发环境]\n  B --> D[测试环境]\n  B --> E[生产环境]\n  C --> F[行为一致]\n  D --> F\n  E --> F",
+      "concepts": [
+        {"name": "环境漂移", "detail": "代码在开发机能跑、服务器跑不了，根因是依赖与系统版本不一致。"},
+        {"name": "一次构建处处运行", "detail": "镜像打包代码+依赖+配置，任何装有 Docker 的机器运行结果一致。"},
+        {"name": "交付物变化", "detail": "从「代码+部署文档」变为「镜像」，部署变成拉镜像运行。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "举例一个你遇到过（或听过）的「在我机器上能跑」问题，说明 Docker 如何规避。",
+      "quiz_topics": ["环境漂移", "一次构建处处运行", "镜像交付"]
+    },
+    {
+      "id": "0.3",
+      "title": "Docker 架构：client / daemon / registry",
+      "goal": "能画出 Docker 三大组件（CLI / daemon / registry）的协作关系",
+      "diagram": "flowchart LR\n  A[\"docker CLI（client）\"] -->|REST API| B[\"dockerd（daemon）\"]\n  B --> C[\"构建/运行容器\"]\n  B <-->|pull / push| D[Registry 镜像仓库]\n  C --> E[镜像与容器]",
+      "concepts": [
+        {"name": "daemon", "detail": "后台常驻 dockerd，真正管理镜像、容器、网络、卷。"},
+        {"name": "client", "detail": "docker 命令行，通过 REST API 把命令发给 daemon 执行。"},
+        {"name": "registry", "detail": "镜像仓库（Docker Hub 最常用），负责 pull/push 镜像。"}
+      ],
+      "code": "docker info   # 查看 daemon 信息（版本、Storage Driver）",
+      "todo": "",
+      "exercise": "用 docker info 找到 Server Version 与 Storage Driver 两行，说明它们来自哪个组件。",
+      "quiz_topics": ["docker daemon", "client/daemon 关系", "registry 作用"]
+    },
+    {
+      "id": "0.4",
+      "title": "安装与第一个容器",
+      "goal": "独立完成安装 Docker 并跑通 hello-world，理解自动拉镜像的流程",
+      "diagram": "flowchart TD\n  A[安装 Docker] --> B[\"docker run hello-world\"]\n  B --> C{本地有镜像?}\n  C -->|无| D[从 Hub 拉取]\n  C -->|有| E[直接运行]\n  D --> E\n  E --> F[输出 Hello from Docker]",
+      "concepts": [
+        {"name": "安装", "detail": "Docker Desktop（Mac/Win）或 docker-engine（Linux）；装完 docker --version 验证。"},
+        {"name": "docker run", "detail": "本地无该镜像时 daemon 自动从 Hub 拉取再运行，无需手动 pull。"},
+        {"name": "输出解读", "detail": "Hello from Docker! 说明 client→daemon→拉取→容器→标准输出全链路打通。"}
+      ],
+      "code": "docker --version\ndocker run hello-world",
+      "todo": "",
+      "exercise": "跑 docker run hello-world，观察镜像拉取与输出，再 docker ps -a 看这个已退出的容器。",
+      "quiz_topics": ["Docker 安装", "hello-world 流程", "自动拉取镜像"]
+    }
+  ]
+}

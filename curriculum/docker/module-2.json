@@ -1,0 +1,84 @@
+{
+  "id": "module-2",
+  "title": "Dockerfile 构建",
+  "weeks": "第3周",
+  "prerequisites": "上完模块 1",
+  "chapters": [
+    {
+      "id": "2.1",
+      "title": "第一个 Dockerfile",
+      "goal": "写出并构建运行第一个 Dockerfile",
+      "diagram": "flowchart LR\n  A[\"源码 + Dockerfile\"] -->|docker build| B[\"镜像 image\"]\n  B -->|docker run| C[容器]\n  A --> D[FROM 基础镜像]\n  A --> E[COPY 复制文件]\n  A --> F[CMD 启动命令]",
+      "concepts": [
+        {"name": "Dockerfile", "detail": "描述构建步骤的文本，docker build -t 名字 . 生成镜像。"},
+        {"name": "核心三指令", "detail": "FROM 基础镜像、COPY 复制文件、CMD 启动命令。"},
+        {"name": "构建上下文", "detail": "docker build 末尾的点 . 表示以当前目录作为构建上下文。"}
+      ],
+      "code": "FROM alpine\nCOPY hello.txt /hello.txt\nCMD cat /hello.txt",
+      "todo": "",
+      "exercise": "写一个 alpine 镜像，COPY 一个文本文件进去，CMD 用 cat 打印它。",
+      "quiz_topics": ["Dockerfile 结构", "FROM/COPY/CMD", "docker build"]
+    },
+    {
+      "id": "2.2",
+      "title": "构建缓存与层复用",
+      "goal": "理解构建缓存机制，写出缓存友好的 Dockerfile",
+      "diagram": "flowchart TD\n  A[\"每条指令 = 一层\"] --> B[\"构建时逐层缓存\"]\n  B --> C{这一层变了?}\n  C -->|否| D[\"命中缓存，跳过\"]\n  C -->|是| E[\"该层及以下全部重建\"]\n  E --> B",
+      "animation": "build-cache",
+      "concepts": [
+        {"name": "一层一缓存", "detail": "每条指令一层，构建时按层缓存，命中直接复用。"},
+        {"name": "失效传播", "detail": "某层内容变化，该层及以下所有层重建，以上仍命中缓存。"},
+        {"name": "友好写法", "detail": "把不常变的依赖放前、常变的源码放后，最大化缓存命中。"}
+      ],
+      "code": "FROM node:18\nCOPY package*.json ./\nRUN npm install\nCOPY . .\nCMD [\"npm\", \"start\"]",
+      "todo": "",
+      "exercise": "说明为什么 COPY package.json 与 RUN npm install 要放在 COPY . . 之前。",
+      "quiz_topics": ["构建缓存", "层缓存失效", "缓存友好写法"]
+    },
+    {
+      "id": "2.3",
+      "title": "核心指令分工",
+      "goal": "掌握常用 Dockerfile 指令的职责与用法",
+      "diagram": "flowchart TD\n  A[FROM 基础镜像] --> B[\"RUN 构建时执行\"]\n  A --> C[\"COPY / ADD 复制文件\"]\n  A --> D[\"ENV 环境变量\"]\n  A --> E[\"CMD 默认启动命令\"]\n  A --> F[\"WORKDIR 工作目录\"]",
+      "concepts": [
+        {"name": "RUN vs CMD", "detail": "RUN 构建时执行（装依赖）；CMD 是容器默认启动命令（可被 run 覆盖）。"},
+        {"name": "COPY vs ADD", "detail": "COPY 纯复制本地文件；ADD 额外支持 URL 与 tar 自动解包，优先用 COPY。"},
+        {"name": "ENV/WORKDIR/ENTRYPOINT", "detail": "ENV 设环境变量、WORKDIR 设工作目录、ENTRYPOINT 定入口命令。"}
+      ],
+      "code": "FROM node:18\nWORKDIR /app\nCOPY . .\nRUN npm install\nENV NODE_ENV=production\nCMD [\"node\", \"app.js\"]",
+      "todo": "",
+      "exercise": "写一个含 ENV+WORKDIR+COPY+RUN+CMD 的 node 应用 Dockerfile，说明各指令执行时机。",
+      "quiz_topics": ["RUN vs CMD", "COPY vs ADD", "ENV/WORKDIR/ENTRYPOINT"]
+    },
+    {
+      "id": "2.4",
+      "title": "构建上下文与 .dockerignore",
+      "goal": "理解构建上下文，用 .dockerignore 避免误打包",
+      "diagram": "flowchart LR\n  A[\"docker build .\"] --> B[打包当前目录为上下文]\n  B --> C[发送给 daemon]\n  C --> D[\"构建时 COPY 从上下文取文件\"]\n  E[.dockerignore] -->|排除| B\n  F[\"node_modules / .git\"] -->|被排除| B",
+      "concepts": [
+        {"name": "构建上下文", "detail": "docker build . 把 . 目录打包发给 daemon，daemon 在上下文内找 Dockerfile 与 COPY 源。"},
+        {"name": "过大风险", "detail": "把 node_modules、.git、日志打进上下文，构建慢又可能泄漏敏感信息。"},
+        {"name": ".dockerignore", "detail": "像 .gitignore 排除大目录与敏感文件，减少上下文。"}
+      ],
+      "code": "# .dockerignore\nnode_modules\n.git\n*.log\n.env",
+      "todo": "",
+      "exercise": "给一个项目写 .dockerignore，至少排除 node_modules、.git、.env。",
+      "quiz_topics": ["构建上下文", ".dockerignore", "上下文瘦身"]
+    },
+    {
+      "id": "2.5",
+      "title": "多阶段构建瘦身",
+      "goal": "用多阶段构建分离编译环境与运行环境，得到精简镜像",
+      "diagram": "flowchart LR\n  A[\"阶段 1 builder：编译\"] --> B[\"生成产物\"]\n  B -->|COPY --from=builder| C[\"阶段 2 runtime：精简运行\"]\n  C --> D[\"最终镜像：小而安全\"]",
+      "concepts": [
+        {"name": "问题", "detail": "编译依赖（编译器、工具链）不该进最终镜像，否则体积臃肿。"},
+        {"name": "多阶段", "detail": "一个 Dockerfile 多个 FROM，builder 阶段编译，runtime 阶段只 COPY 产物。"},
+        {"name": "效果", "detail": "COPY --from=builder 把编译结果搬到精简运行时，体积可降一个量级。"}
+      ],
+      "code": "FROM node:18 AS builder\nCOPY . .\nRUN npm run build\n\nFROM nginx:alpine\nCOPY --from=builder /app/dist /usr/share/nginx/html",
+      "todo": "",
+      "exercise": "把一个前端项目改成 node 构建阶段 + nginx 运行阶段的两段构建。",
+      "quiz_topics": ["多阶段构建", "COPY --from", "镜像瘦身"]
+    }
+  ]
+}

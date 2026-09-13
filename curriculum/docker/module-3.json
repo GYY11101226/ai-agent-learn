@@ -1,0 +1,69 @@
+{
+  "id": "module-3",
+  "title": "网络",
+  "weeks": "第4周",
+  "prerequisites": "上完模块 1",
+  "chapters": [
+    {
+      "id": "3.1",
+      "title": "bridge 网络与容器间通信",
+      "goal": "理解默认 bridge 网络，容器如何互相通信",
+      "diagram": "flowchart LR\n  A[\"容器 A\"] --> B[\"docker0 网桥\"]\n  C[\"容器 B\"] --> B\n  B --> D[\"各自私有 IP\"]\n  D --> E[\"同网桥可直连\"]",
+      "concepts": [
+        {"name": "默认 bridge", "detail": "docker0 虚拟网桥，容器默认接入，各自分配私有 IP。"},
+        {"name": "容器互通", "detail": "同一 bridge 上容器可直连对方内网 IP，无需 -p。"},
+        {"name": "隔离性", "detail": "bridge 内互通，跨 bridge 或与外界通信需端口映射。"}
+      ],
+      "code": "docker run -d --name db alpine\n# 另一容器内 ping db 的内网 IP",
+      "todo": "",
+      "exercise": "起两个容器，找出各自 IP，验证它们在同一网桥能互通。",
+      "quiz_topics": ["bridge 网络", "docker0", "容器间直连"]
+    },
+    {
+      "id": "3.2",
+      "title": "端口映射",
+      "goal": "理解 -p HOST:CONTAINER 端口映射的原理",
+      "diagram": "flowchart LR\n  A[\"外部客户端\"] --> B[\"宿主机 localhost:8080\"]\n  B -->|DNAT 转发| C[\"容器 :80\"]\n  C --> D[容器内应用]\n  D --> B",
+      "animation": "port-mapping",
+      "concepts": [
+        {"name": "映射目的", "detail": "容器端口默认仅在内部，-p 把宿主端口转发到容器端口。"},
+        {"name": "DNAT", "detail": "宿主机做目的地址转换，流量 host:port 转发到 container:port。"},
+        {"name": "冲突与多实例", "detail": "宿主端口唯一，可多个容器映射到不同宿主端口。"}
+      ],
+      "code": "docker run -d -p 8080:80 nginx\n# 访问 http://localhost:8080",
+      "todo": "",
+      "exercise": "起 nginx 映射 8080:80 用浏览器访问；再试 9090:80 并观察端口占用。",
+      "quiz_topics": ["-p 端口映射", "DNAT", "宿主端口冲突"]
+    },
+    {
+      "id": "3.3",
+      "title": "自定义网络与 DNS",
+      "goal": "用自定义网络让容器通过容器名互相发现",
+      "diagram": "flowchart LR\n  A[\"docker network create app\"] --> B[\"容器加入自定义网络\"]\n  B --> C[\"内嵌 DNS 服务\"]\n  C --> D[\"容器名到 IP 自动解析\"]\n  D --> E[\"直接 ping 名字\"]",
+      "concepts": [
+        {"name": "自定义 network", "detail": "docker network create 建独立网络，容器显式加入。"},
+        {"name": "内嵌 DNS", "detail": "同一自定义网络的容器可用容器名互相解析，不必记 IP。"},
+        {"name": "对比默认 bridge", "detail": "默认 bridge 无内置 DNS，只能靠 IP 或 --link。"}
+      ],
+      "code": "docker network create app\ndocker run -d --network app --name db alpine\n# 另一容器加入同一网络后可直接 ping db",
+      "todo": "",
+      "exercise": "建一个自定义网络，起两个容器并加入，用容器名互相 ping 通。",
+      "quiz_topics": ["自定义网络", "内嵌 DNS", "服务发现"]
+    },
+    {
+      "id": "3.4",
+      "title": "网络模式",
+      "goal": "区分 bridge / host / none 等网络模式及适用场景",
+      "diagram": "flowchart TD\n  A{选哪种网络模式?} -->|默认| B[\"bridge 虚拟网桥 + NAT\"]\n  A -->|性能优先| C[\"host 共享宿主网络栈\"]\n  A -->|完全隔离| D[\"none 无网络\"]",
+      "concepts": [
+        {"name": "bridge（默认）", "detail": "虚拟网桥 + NAT，隔离且通用。"},
+        {"name": "host", "detail": "直接共享宿主网络栈，无隔离、性能最好（Linux）。"},
+        {"name": "none", "detail": "无任何网络，仅回环，用于完全隔离。"}
+      ],
+      "code": "docker run --network host nginx\n# 直接占用宿主机 80 端口",
+      "todo": "",
+      "exercise": "说明 host 模式与默认 bridge 在端口访问上的差异。",
+      "quiz_topics": ["host 模式", "none 模式", "网络模式选择"]
+    }
+  ]
+}

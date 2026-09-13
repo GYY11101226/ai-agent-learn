@@ -1,0 +1,84 @@
+{
+  "id": "module-1",
+  "title": "镜像",
+  "weeks": "第2周",
+  "prerequisites": "上完模块 0",
+  "chapters": [
+    {
+      "id": "1.1",
+      "title": "镜像与容器：只读模板 + 运行实例",
+      "goal": "能区分「镜像」与「容器」两个概念及其类比关系",
+      "diagram": "flowchart LR\n  A[\"镜像（只读模板）\"] -->|docker run| B[\"容器 1（运行实例）\"]\n  A -->|docker run| C[\"容器 2（运行实例）\"]\n  A -->|docker run| D[\"容器 3（运行实例）\"]",
+      "concepts": [
+        {"name": "镜像", "detail": "只读模板，含文件系统与启动配置；docker images 查看本地镜像。"},
+        {"name": "容器", "detail": "镜像的运行实例，docker run 从镜像创建，可写、可启停。"},
+        {"name": "类比", "detail": "镜像像类（class）或模具，容器像对象（instance）或浇铸件，一个镜像出多个容器。"}
+      ],
+      "code": "docker run nginx\ndocker run nginx   # 同一镜像再起一个，互不影响",
+      "todo": "",
+      "exercise": "从同一个 alpine 镜像起两个容器，各写一个不同文件，说明它们独立且不改镜像。",
+      "quiz_topics": ["镜像 vs 容器", "只读模板", "一镜像多容器"]
+    },
+    {
+      "id": "1.2",
+      "title": "镜像分层与写时复制",
+      "goal": "理解镜像分层结构与写时复制（COW），说清改底层与改顶层的代价差异",
+      "diagram": "flowchart TD\n  A[\"只读层 基础镜像 ubuntu\"] --> B[\"只读层 RUN apt-get\"]\n  B --> C[\"只读层 COPY app\"]\n  C --> D[\"可写容器层 COW\"]\n  D -->|要改文件时| E[\"先复制到底层再改\"]",
+      "animation": "image-layers",
+      "concepts": [
+        {"name": "分层", "detail": "每条构建指令生成一层，层以栈堆叠，底层只读共享。"},
+        {"name": "写时复制 COW", "detail": "容器要改文件时，先从只读层复制到可写层再改，底层不变。"},
+        {"name": "复用价值", "detail": "相同底层可被多个镜像与容器共享，磁盘省空间、拉取更快。"}
+      ],
+      "code": "docker image history nginx   # 查看镜像的分层历史",
+      "todo": "",
+      "exercise": "用 docker image history nginx 数出至少 5 层，标注每层大致对应的指令。",
+      "quiz_topics": ["镜像分层", "写时复制 COW", "层复用与共享"]
+    },
+    {
+      "id": "1.3",
+      "title": "镜像管理：pull / images / rmi / tag",
+      "goal": "熟练使用 pull / images / tag / rmi 管理本地镜像",
+      "diagram": "flowchart LR\n  A[Registry] -->|docker pull| B[\"本地镜像 images\"]\n  B -->|docker tag| C[\"别名 myapp:v1\"]\n  B -->|docker rmi| D[删除镜像]\n  C --> B",
+      "concepts": [
+        {"name": "pull / images", "detail": "从 registry 拉镜像；docker images（或 image ls）列出本地镜像。"},
+        {"name": "tag", "detail": "给镜像起别名（nginx:myapp），不改内容只加标签。"},
+        {"name": "rmi", "detail": "删除本地镜像，有容器占用时需先删容器或加 -f。"}
+      ],
+      "code": "docker pull nginx:1.25\ndocker tag nginx:1.25 myapp:v1\ndocker rmi myapp:v1",
+      "todo": "",
+      "exercise": "pull 一个 alpine，打 alpine:mine 的 tag，再 rmi 掉这个别名并确认原镜像还在。",
+      "quiz_topics": ["pull/tag/rmi", "镜像命名", "镜像占用删除"]
+    },
+    {
+      "id": "1.4",
+      "title": "官方镜像与 tag 语义",
+      "goal": "理解 repository:tag 命名，识破 latest 不是「最新」",
+      "diagram": "flowchart LR\n  A[\"镜像名 repository\"] --> B[\"加 :tag 指定版本\"]\n  B --> C[\"nginx:1.25.4 明确锁定\"]\n  B --> D[\"nginx:latest 默认标签\"]\n  D --> E[\"latest 不等于最新\"]",
+      "concepts": [
+        {"name": "命名格式", "detail": "[registry/]repository:tag，缺 tag 默认 latest。"},
+        {"name": "latest 陷阱", "detail": "只是「未显式指定时的默认标签」，不代表最新版本，可能已滞后。"},
+        {"name": "生产实践", "detail": "显式写具体 tag（nginx:1.25.4）锁定版本，避免意外升级。"}
+      ],
+      "code": "docker pull nginx          # 等于 nginx:latest，版本不明确\ndocker pull nginx:1.25.4   # 锁定具体版本",
+      "todo": "",
+      "exercise": "说明为什么生产环境写 nginx:latest 有风险，应该怎么写。",
+      "quiz_topics": ["repository:tag", "latest 语义", "版本锁定"]
+    },
+    {
+      "id": "1.5",
+      "title": "容器生命周期管理",
+      "goal": "掌握 ps / start / stop / rm / exec / logs 等容器生命周期命令",
+      "diagram": "flowchart LR\n  A[created] -->|start| B[running]\n  B -->|pause| C[paused]\n  C -->|unpause| B\n  B -->|stop| D[exited]\n  D -->|start| B\n  D -->|rm| E[removed]",
+      "concepts": [
+        {"name": "状态机", "detail": "容器有 created/running/paused/exited/removed 等状态，命令在状态间迁移。"},
+        {"name": "常用命令", "detail": "ps -a 看全部（含已退出）、start/stop/restart 启停、rm 删除。"},
+        {"name": "exec 与 logs", "detail": "exec -it 进容器跑命令，logs -f 跟踪标准输出。"}
+      ],
+      "code": "docker run -d --name web nginx\ndocker ps\ndocker logs -f web\ndocker stop web && docker rm web",
+      "todo": "",
+      "exercise": "起一个后台 nginx，用 exec -it 进去看 /usr/share/nginx/html 下的首页文件，再 stop/rm。",
+      "quiz_topics": ["容器状态机", "start/stop/rm", "exec 与 logs"]
+    }
+  ]
+}
