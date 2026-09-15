@@ -101,7 +101,11 @@ LEARNING_MODEL=claude-opus-5     # 想省钱跑测验可换 claude-haiku-4-5
 config.py            # 配置：模型、路径、复习间隔
 curriculum/
   courses.json       # 课程目录（主页数据源）
-  ai-agent/          # 第一门课（module-0..5.json）
+  ai-agent/          # AI Agent 课（module-0..5.json）
+  fastapi/           # FastAPI 课（module-0..5.json）
+  machine-learning/  # 机器学习课（module-0..5.json）
+  docker/            # Docker 课（module-0..5.json）
+  nginx/             # Nginx 课（module-0..5.json，含 4 个交互式 SVG 动画）
 frontend/            # React + Vite SPA
   src/pages/         # Catalog / Detail / Lesson / Quiz / Progress / Review
   src/components/    # CourseCard / ChapterList / QuizView / ResultView ...

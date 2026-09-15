@@ -1,0 +1,68 @@
+{
+  "id": "module-0",
+  "title": "预备：反向代理心智模型",
+  "weeks": "第1周",
+  "prerequisites": "会基础 Linux 命令与 curl 即可",
+  "chapters": [
+    {
+      "id": "0.1",
+      "title": "什么是 Nginx：服务器 / 反向代理 / 负载均衡",
+      "goal": "能说清 Nginx 的三大角色及各自解决什么问题",
+      "diagram": "flowchart TD\n  A[\"Nginx\"] --> B[\"Web 服务器：托管静态资源\"]\n  A --> C[\"反向代理：转发到后端应用\"]\n  A --> D[\"负载均衡：分发到多台后端\"]\n  B --> E[\"高性能 + 低内存\"]\n  C --> E\n  D --> E",
+      "concepts": [
+        {"name": "Web 服务器", "detail": "直接托管静态文件（HTML/CSS/JS/图片），响应快、资源占用低。"},
+        {"name": "反向代理", "detail": "站在服务端，把客户端请求转发给后端应用（Python/Node 等），隐藏后端细节。"},
+        {"name": "负载均衡", "detail": "把流量按策略分发给多台后端，提升吞吐与可用性。"}
+      ],
+      "code": "",
+      "todo": "装好 Nginx 后分别体验它的两个角色：先直接托管一个静态目录，再反代到 python -m http.server 8000，体会「同一个 Nginx」既当 Web 服务器又当反向代理。",
+      "exercise": "说出 Nginx 最常见的三种使用场景，并各举一个你熟悉的真实例子。",
+      "quiz_topics": ["Nginx 三种角色", "反向代理", "负载均衡"]
+    },
+    {
+      "id": "0.2",
+      "title": "正向代理 vs 反向代理",
+      "goal": "区分两者「代理的是谁」这一本质区别",
+      "diagram": "flowchart LR\n  A[\"客户端\"] -->|代理客户端| B[\"正向代理\"]\n  B --> C[\"外网服务器\"]\n  D[\"客户端\"] --> E[\"反向代理：代理服务端\"]\n  E --> F[\"后端服务器\"]",
+      "concepts": [
+        {"name": "正向代理", "detail": "代理「客户端」，帮内网用户访问外网，服务端看到的是代理地址。"},
+        {"name": "反向代理", "detail": "代理「服务端」，帮服务端接收外网请求再转发到内网后端，客户端看到的是代理地址。"},
+        {"name": "本质区别", "detail": "代理站的位置不同：正向代理站在客户端一侧，反向代理站在服务端一侧。"}
+      ],
+      "code": "",
+      "todo": "用 Nginx 反代一个本地服务，再分别 curl 直连后端和经过 Nginx 访问，对比两次后端日志里看到的来源 IP 与请求路径的差异。",
+      "exercise": "各举一个现实例子：你每天用的某个「正向代理」，以及你访问的某个背后其实是「反向代理」的网站。",
+      "quiz_topics": ["正向代理", "反向代理", "两者区别"]
+    },
+    {
+      "id": "0.3",
+      "title": "master / worker 进程模型与事件驱动",
+      "goal": "画出 master/worker 关系，说清为什么 Nginx 能支撑高并发",
+      "diagram": "flowchart TD\n  A[\"master 进程\"] --> B[\"读取配置 + 管理 worker\"]\n  A --> C[\"worker 1\"]\n  A --> D[\"worker 2\"]\n  A --> E[\"worker N\"]\n  C --> F[\"事件驱动：单线程处理大量连接\"]\n  D --> F\n  E --> F",
+      "concepts": [
+        {"name": "master 进程", "detail": "只有一个，负责读取配置、绑定端口、监控并管理 worker 进程生命周期。"},
+        {"name": "worker 进程", "detail": "真正处理请求的多个进程；数量通常设为 CPU 核心数。"},
+        {"name": "事件驱动", "detail": "每个 worker 单线程非阻塞，靠事件循环同时处理成千上万连接，内存占用低。"}
+      ],
+      "code": "ps -ef | grep nginx   # 看到一个 master + 多个 worker",
+      "todo": "把 worker_processes 从 auto 改成 2，nginx -t 校验并 reload，再用 ps 观察 worker 进程数量如何变化。",
+      "exercise": "用 ps 查看本机 Nginx 的 master/worker 进程，观察 worker 数量是否接近 CPU 核数。",
+      "quiz_topics": ["master 进程", "worker 进程", "事件驱动"]
+    },
+    {
+      "id": "0.4",
+      "title": "安装与第一个页面",
+      "goal": "独立完成安装并跑通欢迎页，理解默认配置与校验流程",
+      "diagram": "flowchart TD\n  A[\"安装 Nginx\"] --> B[\"nginx -t 校验配置\"]\n  B --> C[\"启动 nginx\"]\n  C --> D[\"访问 http://localhost\"]\n  D --> E[\"看到默认欢迎页\"]",
+      "concepts": [
+        {"name": "安装", "detail": "macOS 用 brew install nginx，Linux 用 apt/yum 装；生产不推荐 Windows。"},
+        {"name": "启动与校验", "detail": "nginx -t 校验配置，nginx 启动、nginx -s stop 停止。"},
+        {"name": "默认页", "detail": "默认监听 80 端口，欢迎页来自默认 root 目录下的 index.html。"}
+      ],
+      "code": "brew install nginx\nnginx -t\nnginx\ncurl http://localhost",
+      "todo": "在 nginx.conf 里找到默认 root 目录，放一个自己写的 index.html 进去，reload 后刷新能看到你的内容。",
+      "exercise": "装好 Nginx 并启动，用 curl -I http://localhost 看响应头里的 Server 字段。",
+      "quiz_topics": ["Nginx 安装", "nginx -t 校验", "默认端口与欢迎页"]
+    }
+  ]
+}

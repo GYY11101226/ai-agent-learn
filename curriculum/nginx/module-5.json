@@ -1,0 +1,83 @@
+{
+  "id": "module-5",
+  "title": "生产化与进阶",
+  "weeks": "第6周",
+  "prerequisites": "上完前面模块，掌握基本配置与代理",
+  "chapters": [
+    {
+      "id": "5.1",
+      "title": "日志格式与 access_log / error_log",
+      "goal": "自定义日志格式，会按需开启/关闭日志并设置级别",
+      "diagram": "flowchart LR\n  A[\"每个请求\"] --> B[\"log_format 模板\"]\n  B --> C[\"access_log 落地\"]\n  D[\"运行错误\"] --> E[\"error_log 按级别记录\"]",
+      "concepts": [
+        {"name": "log_format", "detail": "自定义访问日志的字段组合，如 IP、状态码、耗时等。"},
+        {"name": "access_log", "detail": "控制访问日志写入位置；off 可关闭，常用于静态资源的日志降噪。"},
+        {"name": "error_log", "detail": "记录运行错误，级别 debug/info/notice/warn/error 可选。"}
+      ],
+      "code": "log_format main '$remote_addr - $request - $status';\naccess_log /var/log/nginx/access.log main;\nerror_log /var/log/nginx/error.log warn;",
+      "todo": "自定义一个日志格式加入 $request_time，用它记录某接口并观察耗时。",
+      "exercise": "自定义日志格式记录请求耗时，并关闭静态资源的访问日志。",
+      "quiz_topics": ["log_format", "access_log", "error_log 级别"]
+    },
+    {
+      "id": "5.2",
+      "title": "rewrite 与 return 重定向",
+      "goal": "配置永久/临时重定向与内部重写",
+      "diagram": "flowchart TD\n  A[\"旧路径请求\"] --> B{哪种方式?}\n  B -->|改 URL| C[\"return 301/302 重定向\"]\n  B -->|内部改写| D[\"rewrite 重写\"]\n  D --> E[\"last 或 break 控制流程\"]",
+      "concepts": [
+        {"name": "return 301/302", "detail": "让浏览器跳到新地址；301 永久、302 临时，常用于 HTTP 跳 HTTPS。"},
+        {"name": "rewrite", "detail": "按正则改写内部 URI，不改变浏览器地址栏，常用于旧路径兼容。"},
+        {"name": "last / break", "detail": "last 重走 location 匹配，break 停止后续 rewrite。"}
+      ],
+      "code": "server {\n  listen 80;\n  server_name old.example.com;\n  return 301 https://example.com$request_uri;\n}\nlocation /old/ {\n  rewrite ^/old/(.*)$ /new/$1 last;\n}",
+      "todo": "配一个从 HTTP 到 HTTPS 的 301 跳转，用 curl -I 确认返回 301 与 Location 头。",
+      "exercise": "配置 301 永久重定向与 rewrite 重写，观察两者对 URL 的不同影响。",
+      "quiz_topics": ["return 301/302", "rewrite", "last/break"]
+    },
+    {
+      "id": "5.3",
+      "title": "WebSocket 代理与长连接",
+      "goal": "配置 Upgrade 头代理 WebSocket，理解 keepalive",
+      "diagram": "flowchart LR\n  A[\"浏览器\"] -->|Upgrade: websocket| B[\"Nginx\"]\n  B -->|透传 Upgrade 头| C[\"后端 WS 服务\"]\n  B <-->|TCP 长连接| C",
+      "concepts": [
+        {"name": "Upgrade 头", "detail": "HTTP 升级到 WebSocket 靠 Upgrade: websocket 请求头，需透传给后端。"},
+        {"name": "Connection: upgrade", "detail": "必须同时传 Connection 头，否则升级握手失败。"},
+        {"name": "HTTP/1.1 与 keepalive", "detail": "代理需 http/1.1；长连接复用减少握手开销。"}
+      ],
+      "code": "location /ws/ {\n  proxy_pass http://backend;\n  proxy_http_version 1.1;\n  proxy_set_header Upgrade $http_upgrade;\n  proxy_set_header Connection \"upgrade\";\n}",
+      "todo": "起一个 WebSocket 服务，用 Nginx 反代并验证握手 Upgrade 成功。",
+      "exercise": "配置 WebSocket 反代，说明为何必须传 Upgrade 与 Connection 头。",
+      "quiz_topics": ["Upgrade 头", "WebSocket 代理", "keepalive"]
+    },
+    {
+      "id": "5.4",
+      "title": "动静分离与前后端分离",
+      "goal": "静态资源走 Nginx、动态接口走后端，理解动静分离",
+      "diagram": "flowchart LR\n  A[\"前端页面请求\"] --> B[\"Nginx 直接返回静态资源\"]\n  C[\"API 请求 /api/\"] --> D[\"Nginx 代理到后端\"]\n  D --> E[\"后端应用\"]",
+      "concepts": [
+        {"name": "动静分离", "detail": "静态资源由 Nginx 直接服务、动态接口转发后端，各司其职最省资源。"},
+        {"name": "前后端分离", "detail": "前端 build 产物放 Nginx，接口走后端，通过 /api 前缀路由区分。"},
+        {"name": "SPA 兜底", "detail": "try_files ... /index.html 让单页应用刷新时由前端路由接管而非 404。"}
+      ],
+      "code": "location / {\n  root /var/www/dist;\n  try_files $uri $uri/ /index.html;\n}\nlocation /api/ {\n  proxy_pass http://backend;\n}",
+      "todo": "把前端 build 产物放 Nginx、接口反代到后端，用 try_files 让单页应用刷新不 404。",
+      "exercise": "配置前后端分离，用 try_files 解决单页应用刷新 404。",
+      "quiz_topics": ["动静分离", "前后端分离", "try_files SPA 兜底"]
+    },
+    {
+      "id": "5.5",
+      "title": "运维最佳实践清单",
+      "goal": "掌握 nginx -t 校验、热重载、优雅升级与配置审查清单",
+      "diagram": "flowchart TD\n  A[\"修改配置\"] --> B[\"nginx -t 校验\"]\n  B -->|失败| A\n  B -->|通过| C[\"nginx -s reload 热重载\"]\n  C --> D[\"监控日志与指标\"]",
+      "concepts": [
+        {"name": "改前校验", "detail": "任何改动先 nginx -t，语法错误会导致启动失败。"},
+        {"name": "热重载 reload", "detail": "nginx -s reload 平滑载入新配置，不停服、不断连。"},
+        {"name": "优雅升级", "detail": "升级二进制用平滑替换 master 的方式，避免中断现有连接。"}
+      ],
+      "code": "nginx -t\nnginx -s reload\nnginx -s quit   # 优雅退出：处理完请求再关闭",
+      "todo": "故意在配置里漏掉一个分号，nginx -t 看报错定位，再 nginx -s reload 观察它拒绝重载，修复后恢复到通过。",
+      "exercise": "走一遍 nginx -t → reload 流程，并说明 reload 为何不停服。",
+      "quiz_topics": ["nginx -t", "reload 热重载", "优雅升级"]
+    }
+  ]
+}

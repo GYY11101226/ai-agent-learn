@@ -1,0 +1,70 @@
+{
+  "id": "module-3",
+  "title": "负载均衡与缓存",
+  "weeks": "第4周",
+  "prerequisites": "上完模块 2，会反向代理配置",
+  "chapters": [
+    {
+      "id": "3.1",
+      "title": "upstream 与负载均衡算法",
+      "goal": "用 upstream 定义后端组并按轮询分发请求",
+      "diagram": "flowchart LR\n  A[\"客户端请求\"] --> B[\"Nginx\"]\n  B --> C[\"后端 1\"]\n  B --> D[\"后端 2\"]\n  B --> E[\"后端 3\"]\n  C --> F[\"轮询依次分发\"]\n  D --> F\n  E --> F",
+      "animation": "load-balancing",
+      "concepts": [
+        {"name": "upstream", "detail": "把一组后端服务器定义为命名组，供 proxy_pass 引用。"},
+        {"name": "默认轮询", "detail": "不指定策略时按 round-robin 依次把请求分给每台后端。"},
+        {"name": "负载均衡价值", "detail": "分摊压力、剔出故障节点、横向扩容，是 Nginx 的核心用途之一。"}
+      ],
+      "code": "upstream backend {\n  server 10.0.0.1:8000;\n  server 10.0.0.2:8000;\n  server 10.0.0.3:8000;\n}\nlocation / {\n  proxy_pass http://backend;\n}",
+      "todo": "起两个返回不同内容的本地服务加进 upstream，多次 curl 观察轮询交替返回。",
+      "exercise": "配一个三台后端的 upstream，连续请求验证轮询分发。",
+      "quiz_topics": ["upstream", "轮询算法", "负载均衡价值"]
+    },
+    {
+      "id": "3.2",
+      "title": "权重与会话保持（weight / ip_hash）",
+      "goal": "用 weight 按比例分配、ip_hash 做会话保持",
+      "diagram": "flowchart LR\n  A[\"同一个客户端 IP\"] --> B[\"ip_hash\"]\n  B --> C[\"总是落到同一台后端\"]\n  D[\"不同后端能力不同\"] --> E[\"weight 按比例分配\"]",
+      "concepts": [
+        {"name": "weight", "detail": "按权重比例分配请求，适合后端机器性能不一的场景。"},
+        {"name": "ip_hash", "detail": "按客户端 IP 哈希，同一 IP 总是落到同一台后端，实现会话亲和。"},
+        {"name": "least_conn", "detail": "把请求分给当前活跃连接最少的后端，适合长连接后端。"}
+      ],
+      "code": "upstream weighted {\n  server 10.0.0.1:8000 weight=3;\n  server 10.0.0.2:8000 weight=1;\n}\nupstream sticky {\n  ip_hash;\n  server 10.0.0.1:8000;\n  server 10.0.0.2:8000;\n}",
+      "todo": "把 upstream 改成 weight=3:1 观察请求比例；再换 ip_hash 观察同 IP 是否总落同一台。",
+      "exercise": "对比 weight 与 ip_hash 两种策略下的实际分发结果。",
+      "quiz_topics": ["weight", "ip_hash", "least_conn"]
+    },
+    {
+      "id": "3.3",
+      "title": "健康检查与失败转移",
+      "goal": "让 Nginx 自动摘除故障后端并恢复",
+      "diagram": "flowchart TD\n  A[\"后端连续失败\"] --> B[\"达到 max_fails\"]\n  B --> C[\"fail_timeout 内摘除\"]\n  C --> D[\"流量分给其它后端\"]\n  D --> E[\"超时后再次探测恢复\"]",
+      "concepts": [
+        {"name": "max_fails", "detail": "在 fail_timeout 时间内允许的最大失败次数，超过则标记不可用。"},
+        {"name": "fail_timeout", "detail": "失败计数的统计窗口，也是节点被摘除后重试的等待期。"},
+        {"name": "被动健康检查", "detail": "开源版 Nginx 靠真实请求的失败来判定（被动），不会主动发探活。"}
+      ],
+      "code": "upstream backend {\n  server 10.0.0.1:8000 max_fails=3 fail_timeout=30s;\n  server 10.0.0.2:8000 max_fails=3 fail_timeout=30s;\n}",
+      "todo": "停掉其中一台后端，连续请求观察 Nginx 是否在 max_fails 次失败后把它摘除。",
+      "exercise": "制造一台后端宕机，观察故障转移与节点恢复的过程。",
+      "quiz_topics": ["max_fails", "fail_timeout", "被动健康检查"]
+    },
+    {
+      "id": "3.4",
+      "title": "proxy_cache 缓存响应",
+      "goal": "配置 proxy_cache 缓存后端响应，理解缓存命中与失效",
+      "diagram": "flowchart TD\n  A[\"请求到来\"] --> B{缓存命中?}\n  B -->|是| C[\"直接返回缓存\"]\n  B -->|否| D[\"转发后端\"]\n  D --> E[\"响应写入缓存\"]\n  E --> F[\"返回给客户端\"]",
+      "animation": "cache",
+      "concepts": [
+        {"name": "proxy_cache_path", "detail": "指定缓存放磁盘的路径、目录层级与共享内存 zones。"},
+        {"name": "proxy_cache_key", "detail": "决定请求如何映射到缓存条目，通常含方法/主机/URI。"},
+        {"name": "proxy_cache_valid", "detail": "按响应码设置缓存有效期，如 200 缓存 10 分钟。"}
+      ],
+      "code": "proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=mycache:10m;\nlocation / {\n  proxy_cache mycache;\n  proxy_cache_key \"$scheme$request_method$host$request_uri\";\n  proxy_cache_valid 200 10m;\n  proxy_pass http://backend;\n}",
+      "todo": "配置 proxy_cache 后连续请求同一接口，用后端日志判断是每次都收到请求还是命中缓存。",
+      "exercise": "开启缓存，用后端访问日志验证第二次请求命中缓存而没打到后端。",
+      "quiz_topics": ["proxy_cache_path", "proxy_cache_key", "缓存命中与失效"]
+    }
+  ]
+}

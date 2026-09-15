@@ -1,0 +1,84 @@
+{
+  "id": "module-2",
+  "title": "静态服务与反向代理",
+  "weeks": "第3周",
+  "prerequisites": "上完模块 1，熟悉基础配置文件",
+  "chapters": [
+    {
+      "id": "2.1",
+      "title": "静态文件服务、目录索引与 autoindex",
+      "goal": "配置静态站点，会开目录列表与 try_files",
+      "diagram": "flowchart LR\n  A[\"请求 /a/b.html\"] --> B[\"root 定位文件\"]\n  B --> C{文件存在?}\n  C -->|是| D[\"直接返回\"]\n  C -->|否| E[\"try_files 或 404\"]",
+      "concepts": [
+        {"name": "静态托管", "detail": "root + index 把请求路径映射到文件系统，直接返回静态文件。"},
+        {"name": "try_files", "detail": "按顺序尝试多个文件路径，都找不到再回退（常用于单页应用）。"},
+        {"name": "autoindex", "detail": "开启后目录请求会返回文件列表页，常用于下载目录。"}
+      ],
+      "code": "location / {\n  root /var/www/html;\n  index index.html;\n}\nlocation /downloads/ {\n  autoindex on;\n}",
+      "todo": "把 autoindex 开/关各试一次，再用 try_files $uri $uri/ /404.html 自定义一个回退页，验证访问不存在的路径时返回的是你的 404 页。",
+      "exercise": "配一个静态目录，开启 autoindex 后用浏览器访问该目录看文件列表。",
+      "quiz_topics": ["静态托管", "try_files", "autoindex"]
+    },
+    {
+      "id": "2.2",
+      "title": "反向代理 proxy_pass",
+      "goal": "用 proxy_pass 把请求转发到后端，说清 URI 带不带路径的差异",
+      "diagram": "flowchart LR\n  A[\"客户端\"] --> B[\"Nginx\"]\n  B -->|proxy_pass| C[\"后端 http://127.0.0.1:8000\"]\n  C --> D[\"响应原路返回\"]\n  D --> B\n  B --> A",
+      "animation": "reverse-proxy",
+      "concepts": [
+        {"name": "proxy_pass", "detail": "把匹配到该 location 的请求转发给指定后端地址。"},
+        {"name": "URI 传递规则", "detail": "末尾不带路径则原样透传 URI；带了路径则用该路径替换匹配前缀再转发。"},
+        {"name": "代理链路", "detail": "客户端 → Nginx → 后端，响应原路返回；后端对客户端透明。"}
+      ],
+      "code": "location /api/ {\n  proxy_pass http://127.0.0.1:8000;\n}\n# 带路径：proxy_pass http://127.0.0.1:8000/app/;",
+      "todo": "起一个本地后端（如 python -m http.server 8000），用 proxy_pass 反代，再对比带/不带路径时 URI 如何变化。",
+      "exercise": "反代一个本地服务，观察 proxy_pass 末尾带斜杠和不带斜杠的 URI 差异。",
+      "quiz_topics": ["proxy_pass", "URI 传递规则", "代理链路"]
+    },
+    {
+      "id": "2.3",
+      "title": "代理头传递与真实客户端 IP",
+      "goal": "传递 X-Forwarded-For / X-Real-IP 让后端拿到真实客户端 IP",
+      "diagram": "flowchart LR\n  A[\"客户端 1.2.3.4\"] -->|X-Forwarded-For: 1.2.3.4| B[\"Nginx\"]\n  B -->|后端看到真实 IP| C[\"后端应用\"]",
+      "concepts": [
+        {"name": "X-Real-IP", "detail": "把客户端真实 IP ($remote_addr) 放进一个自定义头传给后端。"},
+        {"name": "X-Forwarded-For", "detail": "记录请求经过的代理链；$proxy_add_x_forwarded_for 会追加当前客户端 IP。"},
+        {"name": "proxy_set_header", "detail": "改写发往后端的请求头；默认只透传部分头，Host 等需显式设置。"}
+      ],
+      "code": "location / {\n  proxy_pass http://backend;\n  proxy_set_header Host $host;\n  proxy_set_header X-Real-IP $remote_addr;\n  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n}",
+      "todo": "在后端打印请求头，分别观察去掉 proxy_set_header 前后 X-Forwarded-For 的差异。",
+      "exercise": "让后端日志记录真实客户端 IP，验证 X-Forwarded-For 的链路。",
+      "quiz_topics": ["X-Real-IP", "X-Forwarded-For", "proxy_set_header"]
+    },
+    {
+      "id": "2.4",
+      "title": "gzip 压缩",
+      "goal": "开启 gzip 压缩静态响应，理解压缩比与 CPU 的权衡",
+      "diagram": "flowchart LR\n  A[\"大文本响应\"] --> B[\"gzip 压缩\"]\n  B --> C[\"体积变小\"]\n  C --> D[\"减少带宽\"]\n  B --> E[\"多耗 CPU\"]",
+      "concepts": [
+        {"name": "gzip on", "detail": "对文本类响应做压缩，显著的带宽节省换来少量 CPU。"},
+        {"name": "gzip_types", "detail": "指定要压缩的 MIME 类型，如 text/css、application/json；二进制类无需压缩。"},
+        {"name": "gzip_min_length", "detail": "小于该长度的响应不值得压缩，避免开销大于收益。"}
+      ],
+      "code": "gzip on;\ngzip_types text/plain text/css application/json application/javascript;\ngzip_min_length 1k;",
+      "todo": "对比开启 gzip 前后同一大文件响应头里的 Content-Length 变化，用 curl -H 观察。",
+      "exercise": "开启 gzip，用 curl 对比压缩前后的 Content-Encoding 与体积变化。",
+      "quiz_topics": ["gzip 开启", "gzip_types", "压缩权衡"]
+    },
+    {
+      "id": "2.5",
+      "title": "高并发调优：worker 与连接数",
+      "goal": "理解 worker 数量与连接数上限的关系，会设 worker_processes",
+      "diagram": "flowchart TD\n  A[\"worker_processes × worker_connections\"]\n  A --> B[\"理论上限并发连接\"]\n  B --> C[\"反向代理场景需 ×2\"]\n  C --> D[\"客户端侧 + 后端侧各占一条连接\"]",
+      "concepts": [
+        {"name": "worker_processes", "detail": "worker 进程数，auto 意为取 CPU 核心数；过多会造成上下文切换浪费。"},
+        {"name": "worker_connections", "detail": "每个 worker 能同时维持的连接数，在 events 块里设置。"},
+        {"name": "理论并发", "detail": "上限 = worker_processes × worker_connections；做反向代理时因前后各一条连接要减半。"}
+      ],
+      "code": "worker_processes auto;\nevents {\n  worker_connections 1024;\n}",
+      "todo": "把 worker_connections 调到 512 并 reload，用 ab -n 1000 -c 100 压测一个静态页，对比 1024 时的吞吐差异。",
+      "exercise": "计算 worker_processes × worker_connections 的理论并发上限，并说明反向代理时为何要除 2。",
+      "quiz_topics": ["worker_processes", "worker_connections", "并发上限计算"]
+    }
+  ]
+}

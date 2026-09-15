@@ -1,0 +1,69 @@
+{
+  "id": "module-4",
+  "title": "安全与 HTTPS",
+  "weeks": "第5周",
+  "prerequisites": "上完模块 2、3，理解反向代理与负载均衡",
+  "chapters": [
+    {
+      "id": "4.1",
+      "title": "访问控制 allow / deny 与 auth_basic",
+      "goal": "用 allow/deny 限制 IP、用 auth_basic 加基本认证",
+      "diagram": "flowchart TD\n  A[\"请求某路径\"] --> B[\"allow/deny 检查来源 IP\"]\n  B -->|拒绝| C[\"403\"]\n  B -->|放行| D[\"auth_basic 校验账号\"]\n  D -->|未认证| E[\"401 要求登录\"]\n  D -->|通过| F[\"访问内容\"]",
+      "concepts": [
+        {"name": "allow / deny", "detail": "按来源 IP 或网段放行/拒绝；顺序敏感，通常放行在前 deny all 收尾。"},
+        {"name": "auth_basic", "detail": "弹出 HTTP 基本认证，配合 htpasswd 生成的账号文件校验。"},
+        {"name": "适用场景", "detail": "保护管理后台、内部接口等不想完全对外暴露的路径。"}
+      ],
+      "code": "location /admin/ {\n  allow 10.0.0.0/8;\n  deny all;\n  auth_basic \"Restricted\";\n  auth_basic_user_file /etc/nginx/.htpasswd;\n}",
+      "todo": "用 htpasswd 生成账号文件配到 auth_basic，验证未认证访问返回 401。",
+      "exercise": "保护一个路径，分别测试 allow/deny 的 403 与基本认证的 401。",
+      "quiz_topics": ["allow/deny", "auth_basic", "401 与 403"]
+    },
+    {
+      "id": "4.2",
+      "title": "限流 limit_req / limit_conn",
+      "goal": "用漏桶算法限制请求速率、限制并发连接数",
+      "diagram": "flowchart LR\n  A[\"请求洪峰\"] --> B[\"漏桶按固定速率放行\"]\n  B --> C[\"超出 burst 的请求\"]\n  C --> D[\"返回 503 限流\"]",
+      "concepts": [
+        {"name": "limit_req_zone", "detail": "按 key（如客户端 IP）定义一块共享内存与速率 rate，供 limit_req 引用。"},
+        {"name": "limit_req / burst", "detail": "应用限流；burst 允许瞬时突发排队，nodelay 则立即丢弃超出的。"},
+        {"name": "limit_conn", "detail": "限制每个来源 IP 的并发连接数，防单点占用过多连接。"}
+      ],
+      "code": "limit_req_zone $binary_remote_addr zone=one:10m rate=10r/s;\nlimit_conn_zone $binary_remote_addr zone=addr:10m;\nlocation /api/ {\n  limit_req zone=one burst=20 nodelay;\n  limit_conn addr 10;\n}",
+      "todo": "把 rate 调到 1r/s，用连续 curl 发 10 个请求，观察哪些返回 503。",
+      "exercise": "配置限流，用压测工具观察 503 与限流效果。",
+      "quiz_topics": ["limit_req", "漏桶算法", "limit_conn"]
+    },
+    {
+      "id": "4.3",
+      "title": "HTTPS 与 TLS 握手",
+      "goal": "配置 HTTPS，说清 TLS 握手四步过程",
+      "diagram": "flowchart LR\n  A[\"客户端\"] -->|1 ClientHello| B[\"服务端\"]\n  B -->|2 ServerHello + 证书| A\n  A -->|3 密钥交换| B\n  B -->|4 Finished + 加密通信| A",
+      "animation": "tls-handshake",
+      "concepts": [
+        {"name": "证书与私钥", "detail": "listen 443 ssl + ssl_certificate + ssl_certificate_key 开启 HTTPS。"},
+        {"name": "TLS 握手", "detail": "ClientHello → ServerHello+证书 → 密钥交换 → 双方 Finished，建立加密通道。"},
+        {"name": "证书链", "detail": "证书需被客户端信任的 CA 签发；自签名证书会有安全告警。"}
+      ],
+      "code": "server {\n  listen 443 ssl;\n  server_name example.com;\n  ssl_certificate /etc/nginx/cert.pem;\n  ssl_certificate_key /etc/nginx/key.pem;\n}",
+      "todo": "用 openssl 生成自签名证书配置 HTTPS，再用 curl -k 访问并观察安全告警。",
+      "exercise": "配一个自签名 HTTPS，用 openssl s_client 观察握手与证书信息。",
+      "quiz_topics": ["ssl 证书配置", "TLS 握手", "证书链与自签名"]
+    },
+    {
+      "id": "4.4",
+      "title": "安全响应头与 CORS",
+      "goal": "加 HSTS 等安全头，配置跨域资源共享",
+      "diagram": "flowchart TD\n  A[\"Nginx 响应\"] --> B[\"Strict-Transport-Security\"]\n  A --> C[\"X-Content-Type-Options\"]\n  A --> D[\"X-Frame-Options\"]\n  A --> E[\"Access-Control-Allow-Origin\"]",
+      "concepts": [
+        {"name": "HSTS", "detail": "Strict-Transport-Security 强制浏览器后续只走 HTTPS。"},
+        {"name": "安全响应头", "detail": "nosniff、X-Frame-Options 等降低 MIME 嗅探、点击劫持等风险。"},
+        {"name": "CORS", "detail": "add_header Access-Control-Allow-Origin 允许浏览器跨域请求该接口。"}
+      ],
+      "code": "add_header Strict-Transport-Security \"max-age=31536000\";\nadd_header X-Content-Type-Options nosniff;\nadd_header X-Frame-Options DENY;\nlocation /api/ {\n  add_header Access-Control-Allow-Origin *;\n}",
+      "todo": "给所有响应加 X-Content-Type-Options，用 curl -I 验证它出现在响应头。",
+      "exercise": "配置安全头与 CORS，用 curl 验证跨域头是否生效。",
+      "quiz_topics": ["HSTS", "安全响应头", "CORS"]
+    }
+  ]
+}

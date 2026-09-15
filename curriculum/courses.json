@@ -22,5 +22,11 @@
     "title": "Docker 从入门到精通",
     "description": "从镜像、构建到网络、数据与 Compose，边做边学容器化",
     "dir": "docker"
+  },
+  {
+    "id": "nginx",
+    "title": "Nginx 从入门到精通",
+    "description": "从反向代理、负载均衡到缓存、安全与生产化，边做边学 Web 服务器",
+    "dir": "nginx"
   }
 ]

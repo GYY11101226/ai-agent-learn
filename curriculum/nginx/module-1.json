@@ -1,0 +1,83 @@
+{
+  "id": "module-1",
+  "title": "核心配置",
+  "weeks": "第2周",
+  "prerequisites": "上完模块 0，已安装并跑通 Nginx",
+  "chapters": [
+    {
+      "id": "1.1",
+      "title": "nginx.conf 结构与指令块",
+      "goal": "读懂 nginx.conf 的层级（main/http/server/location）与指令继承",
+      "diagram": "flowchart TD\n  A[\"main 全局\"] --> B[\"events 块：连接处理\"]\n  A --> C[\"http 块：Web 相关\"]\n  C --> D[\"server 块：虚拟主机\"]\n  D --> E[\"location 块：匹配 URI\"]\n  E --> F[\"指令逐层向下继承\"]",
+      "concepts": [
+        {"name": "指令与块", "detail": "配置由「指令」组成，指令可放进「块/上下文」里，块可嵌套。"},
+        {"name": "核心上下文", "detail": "main(全局) → http(Web) → server(虚拟主机) → location(URI 匹配)。"},
+        {"name": "继承", "detail": "外层指令可被内层同名指令覆盖；读懂继承才能读懂配置。"}
+      ],
+      "code": "http {\n  server {\n    listen 80;\n    location / {\n      root /var/www/html;\n    }\n  }\n}",
+      "todo": "运行 nginx -T 查看展开后的完整生效配置，找一个藏在 include 文件、在主配置文件里看不到的指令。",
+      "exercise": "打开 nginx.conf，指出 main / http / server / location 各层，说出每个指令属于哪一层。",
+      "quiz_topics": ["指令与块", "四大上下文", "指令继承"]
+    },
+    {
+      "id": "1.2",
+      "title": "server 块与虚拟主机",
+      "goal": "用 listen 与 server_name 在同一台机器上配置多个虚拟主机",
+      "diagram": "flowchart LR\n  A[\"请求 Host: a.example.com\"] --> B[\"server_name 匹配\"]\n  B --> C[\"虚拟主机 A\"]\n  D[\"请求 Host: b.example.com\"] --> B\n  B --> E[\"虚拟主机 B\"]",
+      "concepts": [
+        {"name": "listen", "detail": "指定监听的 IP/端口，如 listen 80、listen 8080。"},
+        {"name": "server_name", "detail": "按请求的 Host 头匹配到对应 server 块，实现一机多站。"},
+        {"name": "虚拟主机", "detail": "一台 Nginx 上跑多个互不干扰的站点，靠 server_name 区分。"}
+      ],
+      "code": "server {\n  listen 80;\n  server_name a.example.com;\n  root /var/www/a;\n}\nserver {\n  listen 80;\n  server_name b.example.com;\n  root /var/www/b;\n}",
+      "todo": "再增加一个只监听 8080 端口的 server 块，用 curl http://localhost:8080 验证它生效。",
+      "exercise": "配置两个虚拟主机，通过不同 server_name 访问到不同目录下的内容。",
+      "quiz_topics": ["listen", "server_name", "虚拟主机"]
+    },
+    {
+      "id": "1.3",
+      "title": "location 匹配规则与优先级",
+      "goal": "掌握精确 / 前缀 / 正则三种匹配方式及其优先级顺序",
+      "diagram": "flowchart TD\n  A[\"请求 URI\"] --> B[\"location = / 精确匹配\"]\n  B --> C[\"location ^~ /images/ 前缀优先\"]\n  C --> D[\"location ~ 正则匹配\"]\n  D --> E[\"location / 兜底前缀\"]",
+      "concepts": [
+        {"name": "精确匹配 =", "detail": "location = /path 完全相等才命中，优先级最高。"},
+        {"name": "前缀匹配", "detail": "location /path 前缀匹配；加 ^~ 表示命中后不再查正则。"},
+        {"name": "正则匹配", "detail": "location ~ 区分大小写、~* 不区分；正则次之，最后才是普通前缀。"}
+      ],
+      "code": "location = /        { return 200 \"exact\"; }\nlocation ^~ /images/ { ... }\nlocation ~ \\.php$    { ... }\nlocation /           { ... }",
+      "todo": "写三段 location 分别匹配 = /、前缀 /app/、正则 ~ \\.html$，用 curl 逐一验证命中哪一段。",
+      "exercise": "写三段不同优先级的 location，用 curl 验证精确 / 前缀 / 正则的实际命中情况。",
+      "quiz_topics": ["精确匹配", "前缀匹配 ^~", "正则与优先级"]
+    },
+    {
+      "id": "1.4",
+      "title": "常用指令与内置变量",
+      "goal": "会用 root / alias / index，会读内置变量 $uri $args $host",
+      "diagram": "flowchart LR\n  A[\"URL 请求\"] --> B[\"root: 路径 + root 拼接\"]\n  A --> C[\"alias: 前缀替换\"]\n  B --> D[\"文件系统路径\"]\n  C --> D",
+      "concepts": [
+        {"name": "root vs alias", "detail": "root 把 URI 拼在目录后；alias 把匹配前缀替换成指定目录，两者拼接方式不同。"},
+        {"name": "index", "detail": "目录请求时默认返回的文件名，如 index index.html index.htm。"},
+        {"name": "内置变量", "detail": "$uri 请求路径、$args 查询串、$host 主机名等，配置里频繁用到。"}
+      ],
+      "code": "location / {\n  root /var/www/html;\n  index index.html index.htm;\n}",
+      "todo": "用 alias 把 /static/ 映射到任意其他目录，对比 root 与 alias 拼接路径的差异。",
+      "exercise": "用 root 与 alias 各配一个目录，观察 URL 路径如何拼成文件系统路径。",
+      "quiz_topics": ["root vs alias", "index 指令", "内置变量"]
+    },
+    {
+      "id": "1.5",
+      "title": "配置拆分与 include",
+      "goal": "用 include 拆分配置文件，掌握 nginx -t 校验与热重载",
+      "diagram": "flowchart LR\n  A[\"nginx.conf\"] -->|include| B[\"mime.types\"]\n  A -->|include| C[\"conf.d/*.conf\"]\n  C --> D[\"每个站点一个文件\"]\n  D --> E[\"nginx -t 校验 → reload\"]",
+      "concepts": [
+        {"name": "include", "detail": "把其它配置文件引入当前上下文，便于按站点/模块拆分。"},
+        {"name": "拆分组织", "detail": "主配置放全局项，各 server 块拆到 conf.d/ 下独立 .conf 文件。"},
+        {"name": "校验与重载", "detail": "nginx -t 校验语法，nginx -s reload 不停服热重载。"}
+      ],
+      "code": "http {\n  include /etc/nginx/mime.types;\n  include /etc/nginx/conf.d/*.conf;\n}",
+      "todo": "把 server 块拆到 conf.d/ 下一个独立 .conf 文件，用 include 引入并 nginx -t 校验。",
+      "exercise": "把配置按 server 拆分到 conf.d/，nginx -t 校验通过后 reload。",
+      "quiz_topics": ["include", "配置拆分", "nginx -t 与 reload"]
+    }
+  ]
+}
