@@ -1,0 +1,68 @@
+{
+  "id": "module-4",
+  "title": "封装与生产化",
+  "weeks": "第5周",
+  "prerequisites": "完成 module-3，能调通两种协议",
+  "chapters": [
+    {
+      "id": "4.1",
+      "title": "认证与密钥管理",
+      "goal": "能把 App API Key 安全地放在服务端环境变量，绝不泄露到前端",
+      "diagram": "flowchart TD\n  A[\"App API Key\"] --> B[\"放服务端环境变量\"]\n  B --> C[\"后端拼 Authorization 头\"]\n  D[\"前端\"] -.只调自营接口.-> C\n  C --> E[\"Dify API\"]",
+      "concepts": [
+        {"name": "密钥分级", "detail": "应用级 App API Key 只管一个应用、权限最小；别把管理员账号 token 塞进业务代码。"},
+        {"name": "环境变量注入", "detail": "KEY 放 .env 或密钥管理服务，代码里 os.environ 读取，绝不硬编码、绝不进 git。"},
+        {"name": "前端零接触", "detail": "前端只调你自己的后端，模型密钥、Dify 地址全部藏在服务端，界面无迹可寻。"}
+      ],
+      "code": "# .env 里存，代码启动时读取\nimport os\nAPP_KEY = os.environ['DIFY_APP_KEY']\n# 请求头只在这拼，永远不 return 给前端\nheaders = {'Authorization': 'Bearer ' + APP_KEY}",
+      "todo": "",
+      "exercise": "检查你现在的封装代码，确认 APP_KEY 没出现在任何前端代码或日志里，并把 .env 写进 .gitignore。",
+      "quiz_topics": ["密钥分级", "环境变量", "前端零接触"]
+    },
+    {
+      "id": "4.2",
+      "title": "错误处理、超时与重试",
+      "goal": "能给接口调用加超时、重试与 429/5xx 兜底，避免拖垮自营服务",
+      "diagram": "flowchart TD\n  A[\"发请求\"] --> B[\"设置超时\"]\n  B --> C{\"成功?\"}\n  C -->|失败| D[\"指数退避重试\"]\n  D --> E[\"仍失败 → 降级兜底\"]\n  C -->|成功| F[\"返回结果\"]",
+      "concepts": [
+        {"name": "超时", "detail": "必须设 timeout，否则 Dify 卡住会拖死你的接口；流式用读超时而非整请求超时。"},
+        {"name": "重试与退避", "detail": "网络抖动/5xx 可重试，按指数退避加抖动；429 要等 Retry-After 再试，别硬顶。"},
+        {"name": "降级兜底", "detail": "重试耗尽后返回一个体面的默认结果或错误码，而不是让上游无限等待。"}
+      ],
+      "code": "for attempt in range(3):\n    try:\n        r = requests.post(url, headers=headers, json=payload, timeout=30)\n        r.raise_for_status()\n        return r.json()['answer']\n    except requests.Timeout:\n        time.sleep(2 ** attempt)  # 指数退避：2s、4s、8s\n# 三次都失败，降级兜底\nreturn {'answer': '服务暂不可用，请稍后再试'}",
+      "todo": "",
+      "exercise": "给上一章的 /ask 接口补上 timeout 和一次错误重试，用断网或填错地址验证它不会无限卡住。",
+      "quiz_topics": ["超时", "指数退避", "降级兜底"]
+    },
+    {
+      "id": "4.3",
+      "title": "会话管理与上下文",
+      "goal": "能管理 conversation_id 的生命周期，控制多轮上下文长短与成本",
+      "diagram": "flowchart TD\n  A[\"首轮调用\"] --> B[\"拿到 conversation_id\"]\n  B --> C[\"存服务端 内存/DB\"]\n  C --> D[\"下轮带上续接\"]\n  D --> E[\"会话结束/超时清理\"]",
+      "concepts": [
+        {"name": "会话归属", "detail": "用 user + 业务会话 id 关联 conversation_id，多人多会话互不串台。"},
+        {"name": "存储位置", "detail": "单机可用内存字典，多实例或要持久化就上 DB/Redis，重启不丢会话。"},
+        {"name": "上下文控制", "detail": "会话越长 token 越贵、越可能漂移；必要时截断历史或定期清空重开。"}
+      ],
+      "code": "# user → conversation_id 的内存映射（单机演示）\nconvs: dict[str, str] = {}\n\ndef chat(user: str, query: str) -> str:\n    payload = {'inputs': {}, 'query': query, 'response_mode': 'blocking', 'user': user}\n    if user in convs:\n        payload['conversation_id'] = convs[user]\n    r = requests.post(url, headers=headers, json=payload, timeout=30).json()\n    convs[user] = r['conversation_id']\n    return r['answer']",
+      "todo": "",
+      "exercise": "把 conversation_id 存进 redis/lru 缓存并设过期时间，验证超时后下次调用会开启全新会话。",
+      "quiz_topics": ["会话归属", "存储", "上下文控制"]
+    },
+    {
+      "id": "4.4",
+      "title": "观测与成本",
+      "goal": "能用运行历史与 token 用量定位问题、控制成本",
+      "diagram": "flowchart TD\n  A[\"每次调用\"] --> B[\"记录 token 用量\"]\n  B --> C[\"Dify 运行历史可复现\"]\n  A --> D[\"聚合 per-user 成本\"]\n  D --> E[\"限额 / 降级策略\"]",
+      "concepts": [
+        {"name": "运行历史", "detail": "Dify 侧可用 run_id 回看某次调用走到了哪个节点、输入输出是什么，用于复现。"},
+        {"name": "token 计量", "detail": "返回里有 usage，后端顺手记下来，按用户/接口聚合出真实成本。"},
+        {"name": "成本管控", "detail": "设每用户限额、用量告警、长上下文换更便宜的模型，都建立在计量之上。"}
+      ],
+      "code": "data = r.json()\nusage = data.get('metadata', {}).get('usage', {})\nprint(usage.get('total_tokens'), usage.get('total_price'))\n# 落库: insert into call_log(user, tokens, cost, created_at) values (...)",
+      "todo": "",
+      "exercise": "从一次 /chat-messages 返回里翻出 usage 字段，写一行日志把 total_tokens 存下来，连调三次看增长。",
+      "quiz_topics": ["运行历史", "token 计量", "成本管控"]
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "id": "module-5",
+  "title": "实战：完整封装第三方应用",
+  "weeks": "第6周",
+  "prerequisites": "完成 module-4，掌握封装与生产化要点",
+  "chapters": [
+    {
+      "id": "5.1",
+      "title": "实战：文档问答 Chatflow 接进网站",
+      "goal": "能把一个带知识库的 Chatflow，经后端封装，变成网站上的问答框",
+      "diagram": "flowchart LR\n  A[\"知识库 Chatflow\"] --> B[\"后端 /ask 接口封装\"]\n  B --> C[\"网站前端请求\"]\n  C --> D[\"页面显示 answer\"]",
+      "concepts": [
+        {"name": "全流程", "detail": "知识库喂私有资料 → Chatflow 接知识检索 → 后端包 /ask → 前端表单提交展示。"},
+        {"name": "后端职责", "detail": "鉴权、拼 Key、转发 query、透传 conversation_id，前端只和 /ask 打交道。"},
+        {"name": "前端极简", "detail": "fetch POST 你的 /ask，把返回 answer 渲染到页面即可，前端不关心 Dify 是否存在。"}
+      ],
+      "code": "// 前端只调自营接口\nconst r = await fetch('/ask', {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify({ query: input }),\n});\nconst { answer } = await r.json();\nsetMessages(m => [...m, { role: 'assistant', content: answer }]);",
+      "todo": "",
+      "exercise": "端到端跑通：上传一份使用手册到知识库，让网站用户能问出文档里的答案，并完整复述数据流向。",
+      "quiz_topics": ["端到端", "后端封装", "前端调用"]
+    },
+    {
+      "id": "5.2",
+      "title": "实战：Workflow 封装同步接口",
+      "goal": "能把一个 Workflow 封装成内部系统可 POST 的同步接口",
+      "diagram": "flowchart LR\n  A[\"Dify Workflow 审核/抽取\"] --> B[\"FastAPI 路由 /audit\"]\n  B --> C[\"内部系统 POST 调用\"]\n  C --> D[\"拿到结构化 outputs\"]",
+      "concepts": [
+        {"name": "同步接口", "detail": "Workflow 天然同步，直接映射成普通 POST 接口，内部系统拿来即用。"},
+        {"name": "结构化输出", "detail": "让 Workflow 输出 JSON 字符串，后端 json.loads 解析，变成自己的 schema。"},
+        {"name": "内网鉴权", "detail": "内部接口仍要鉴权（内网 token/Basic Auth），不能因为内网就裸奔。"}
+      ],
+      "code": "@app.post('/audit')\ndef audit(body: AuditIn):\n    r = requests.post('http://localhost/v1/workflows/run',\n        headers={'Authorization': 'Bearer ' + KEY},\n        json={'inputs': {'text': body.text}, 'response_mode': 'blocking', 'user': body.user})\n    outs = r.json()['data']['outputs']\n    return json.loads(outs['result'])  # 工作流输出的 JSON 字符串 → dict",
+      "todo": "",
+      "exercise": "做一个内容审核 Workflow（输出是否违规及原因 JSON），用 /audit 接口接进你的系统做旁路校验。",
+      "quiz_topics": ["同步接口", "结构化输出", "内网鉴权"]
+    },
+    {
+      "id": "5.3",
+      "title": "实战：SSE 流式前端接入",
+      "goal": "能从前端逐块读取 SSE 流，实现打字机式逐步渲染",
+      "diagram": "flowchart LR\n  A[\"前端 fetch stream\"] --> B[\"逐块读 SSE data 行\"]\n  B --> C[\"累加 answer 增量\"]\n  C --> D[\"打字机式渲染\"]",
+      "concepts": [
+        {"name": "fetch 流式读", "detail": "response.body 是 ReadableStream，配合 getReader 逐步读，不能一次 readText 读完。"},
+        {"name": "解析 SSE 行", "detail": "每块按换行拆行，data: 开头的才是有效增量，用 event 字段判断是否结束。"},
+        {"name": "增量渲染", "detail": "把每段 answer 拼到已显示文本尾部，逐字浮现，首字延迟大幅下降。"}
+      ],
+      "code": "const r = await fetch('/chat-stream', {\n  method: 'POST', headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify({ query }),\n});\nconst reader = r.body.getReader();\nconst dec = new TextDecoder();\nlet acc = '';\nwhile (true) {\n  const { done, value } = await reader.read();\n  if (done) break;\n  acc += dec.decode(value, { stream: true });\n  const lines = acc.split('\\n');\n  acc = lines.pop() || '';            // 尾部半行保留到下次\n  for (const line of lines) {\n    if (!line.startsWith('data: ')) continue;\n    const msg = JSON.parse(line.slice(6));\n    if (msg.event === 'message') setText(t => t + msg.answer);\n  }\n}",
+      "todo": "",
+      "exercise": "把上面流式读取跑通，对比 blocking 和 streaming 两种模式下首字出现的时间差，记录你的感受。",
+      "quiz_topics": ["fetch stream", "SSE 解析", "增量渲染"]
+    },
+    {
+      "id": "5.4",
+      "title": "生产清单",
+      "goal": "能按清单逐项核对一个 Dify 封装服务是否达到上产标准",
+      "diagram": "flowchart TD\n  A[\"上产前核对\"] --> B[\"密钥\"]\n  A --> C[\"超时重试\"]\n  A --> D[\"限流\"]\n  A --> E[\"成本\"]\n  A --> F[\"多模型\"]\n  A --> G[\"监控告警\"]",
+      "concepts": [
+        {"name": "四件套", "detail": "密钥隔离、超时重试、限流、降级兜底，四件缺一不可，是上产底线。"},
+        {"name": "成本与多模型", "detail": "按任务挑不同模型，长上下文用便宜模型，定期看 usage 趋势做预算。"},
+        {"name": "可观测", "detail": "日志带 run_id/token/耗时，异常告警，出问题能复现到具体那次调用。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "拿你封装好的接口对照清单逐项打勾，找出还缺的一项并补上，说明补它要改哪几行。",
+      "quiz_topics": ["上产清单", "限流", "可观测"]
+    }
+  ]
+}

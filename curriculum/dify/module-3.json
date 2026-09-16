@@ -1,0 +1,85 @@
+{
+  "id": "module-3",
+  "title": "嵌入第三方应用：接口调用",
+  "weeks": "第4周",
+  "prerequisites": "完成 module-2，理解 Workflow 与 Chatflow",
+  "chapters": [
+    {
+      "id": "3.1",
+      "title": "API 接入全貌：两种协议与 App API Key",
+      "goal": "能列出 Dify 两种对外协议、认证方式与一次调用的完整链路",
+      "diagram": "flowchart LR\n  A[\"第三方应用\"] -->|Bearer Key| B[\"/chat-messages 或 /workflows/run\"]\n  B --> C[\"Dify 服务端执行流\"]\n  C -->|响应 JSON / SSE| A",
+      "animation": "api-embed",
+      "concepts": [
+        {"name": "两种协议", "detail": "对话/Agent 用 /chat-messages，工作流用 /workflows/run，各有一个版本化的 REST 端点。"},
+        {"name": "认证", "detail": "每个应用一把 App API Key，请求头 Authorization: Bearer app-xxx，须由服务端持有。"},
+        {"name": "调用全链路", "detail": "第三方应用 → Dify 接口 → 执行编排 → 返回结果，第三方应用再自行处理展示给用户。"}
+      ],
+      "code": "curl -X POST http://localhost/v1/workflows/run \\\n  -H \"Authorization: Bearer $APP_KEY\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"inputs\":{},\"response_mode\":\"blocking\",\"user\":\"u1\"}'",
+      "todo": "",
+      "exercise": "在「API 访问」页对比两个端点的调用示例，找出 headers、路径、body 三处各有什么不同。",
+      "quiz_topics": ["两种协议", "App API Key", "调用链路"]
+    },
+    {
+      "id": "3.2",
+      "title": "工作流接口 /workflows/run",
+      "goal": "能用 requests 同步调工作流接口，并正确解析 data.outputs 结果",
+      "diagram": "flowchart LR\n  A[\"POST /workflows/run\"] --> B[\"inputs 入参\"]\n  B --> C[\"Dify 跑 Workflow\"]\n  C --> D[\"输出 outputs JSON\"]\n  D --> E[\"业务后端解析取用\"]",
+      "concepts": [
+        {"name": "同步返回", "detail": "工作流接口一次请求等完整结果，返回 data.outputs，适合非长时的一次性任务。"},
+        {"name": "inputs 结构", "detail": "与流的输入变量一一对应，缺了会报错，字段名必须和工作流里定义的一致。"},
+        {"name": "错误字段", "detail": "返回里 data.status / error 区分成功失败，先判 status 再取 outputs，别盲目解析。"}
+      ],
+      "code": "import requests\n\nresp = requests.post(\n    'http://localhost/v1/workflows/run',\n    headers={'Authorization': 'Bearer ' + APP_KEY},\n    json={'inputs': {'text': '待审核内容'}, 'response_mode': 'blocking', 'user': 'u1'},\n)\ndata = resp.json()\nif data.get('data', {}).get('status') == 'succeeded':\n    print(data['data']['outputs'])  # 拿到工作流输出",
+      "todo": "",
+      "exercise": "写一个只接收 text 输入、输出 sentiment 的工作流，用上面代码跑通并打印 outputs。",
+      "quiz_topics": ["workflows/run", "inputs", "outputs"]
+    },
+    {
+      "id": "3.3",
+      "title": "对话流接口 /chat-messages",
+      "goal": "能用 conversation_id 续接多轮对话，并区分 query 与 inputs 的职责",
+      "diagram": "flowchart LR\n  A[\"POST /chat-messages\"] --> B[\"query + inputs\"]\n  B --> C[\"Dify 跑 Chatflow\"]\n  C --> D[\"返回 answer\"]\n  D --> E[\"conversation_id 续接\"]\n  E --> A",
+      "concepts": [
+        {"name": "query 与 inputs", "detail": "query 是用户那句话，inputs 是额外的结构化输入变量（如用户 ID、场景 code）。"},
+        {"name": "conversation_id", "detail": "第一轮返回的 id 下一轮要原样带上，Dify 才能接上上下文，否则每次都是新会话。"},
+        {"name": "user 字段", "detail": "标识最终用户，用于隔离不同人的会话，避免多人共用一个应用时串台。"}
+      ],
+      "code": "resp = requests.post(\n    'http://localhost/v1/chat-messages',\n    headers={'Authorization': 'Bearer ' + APP_KEY},\n    json={'inputs': {'name': '小明'}, 'query': '我叫小明，你好', 'response_mode': 'blocking', 'user': 'u1'},\n)\nanswer = resp.json()['answer']\ncid = resp.json()['conversation_id']  # 下轮续接要带上\n\n# 第二轮带 conversation_id\nresp2 = requests.post('http://localhost/v1/chat-messages',\n    headers={'Authorization': 'Bearer ' + APP_KEY},\n    json={'inputs': {}, 'query': '我叫什么名字?', 'conversation_id': cid, 'response_mode': 'blocking', 'user': 'u1'})",
+      "todo": "",
+      "exercise": "连续两轮调 /chat-messages，第二轮带上 conversation_id，验证模型能否记得第一轮你告诉它的名字。",
+      "quiz_topics": ["chat-messages", "conversation_id", "query/inputs"]
+    },
+    {
+      "id": "3.4",
+      "title": "流式响应：blocking vs streaming",
+      "goal": "能区分两种 response_mode 的返回形态，并解析 SSE 流式增量",
+      "diagram": "flowchart TD\n  A[\"response_mode\"] --> B[\"blocking：一次性返回完整 answer\"]\n  A --> C[\"streaming：SSE 分块推送\"]\n  C --> D[\"逐行 data: {...} 增量\"]\n  D --> E[\"前端边收边渲染\"]",
+      "animation": "streaming-sse",
+      "concepts": [
+        {"name": "blocking", "detail": "等全部生成完一次性返回，逻辑简单，但首字延迟高，长回复体验差。"},
+        {"name": "streaming(SSE)", "detail": "服务端持续推送 event 行，每条 data 一个增量，前端边收边显示，首字快。"},
+        {"name": "event 类型", "detail": "message 是内容增量、message_end 是结束标记，用事件类型判断推进到哪一步。"}
+      ],
+      "code": "resp = requests.post('http://localhost/v1/chat-messages',\n    headers={'Authorization': 'Bearer ' + APP_KEY},\n    json={'inputs': {}, 'query': '讲个笑话', 'response_mode': 'streaming', 'user': 'u1'},\n    stream=True)\nfor line in resp.iter_lines():\n    if line:\n        print(line.decode('utf-8'))  # 每行形如 data: {\"event\":\"message\",\"answer\":\"...\"}",
+      "todo": "",
+      "exercise": "用 response_mode=streaming 调一次，看原始 SSE 行里 event 字段如何从 message 变到 message_end。",
+      "quiz_topics": ["blocking", "streaming", "SSE"]
+    },
+    {
+      "id": "3.5",
+      "title": "封装为接口：第三方后端包一层",
+      "goal": "能在自营后端包一层接口对外暴露，隔离密钥与协议细节",
+      "diagram": "flowchart TD\n  A[\"最终用户 / 前端\"] --> B[\"自营 FastAPI 接口\"]\n  B --> C[\"服务端持 Key 调 Dify API\"]\n  C --> D[\"Dify 执行\"]\n  D --> E[\"结果经自营接口返回\"]",
+      "concepts": [
+        {"name": "为什么要包一层", "detail": "密钥不下发前端、隐藏 Dify 调用细节、统一鉴权限流日志，前端只认自己的 API。"},
+        {"name": "后端持有密钥", "detail": "APP_KEY 放环境变量，只在服务端拼 Authorization 头，前端永远拿不到。"},
+        {"name": "屏蔽协议差异", "detail": "把 blocking/streaming、两种端点这些差异吞在封装层，对外暴露稳定简洁的接口。"}
+      ],
+      "code": "from fastapi import FastAPI\nfrom pydantic import BaseModel\nimport os, requests\n\napp = FastAPI()\nKEY = os.environ['DIFY_APP_KEY']\n\nclass Ask(BaseModel):\n    query: str\n\n@app.post('/ask')\ndef ask(body: Ask):\n    r = requests.post('http://localhost/v1/chat-messages',\n        headers={'Authorization': 'Bearer ' + KEY},\n        json={'inputs': {}, 'query': body.query, 'response_mode': 'blocking', 'user': 'anonymous'},\n        timeout=30)\n    return {'answer': r.json()['answer']}",
+      "todo": "",
+      "exercise": "把上面封装改成真正的业务接口：加一个自己的鉴权，并把 Dify 的 conversation_id 存到会话里透传。",
+      "quiz_topics": ["封装层", "密钥隔离", "协议屏蔽"]
+    }
+  ]
+}

@@ -11,6 +11,10 @@ import PortMappingAnimation from './PortMappingAnimation'
 import ReverseProxyAnimation from './ReverseProxyAnimation'
 import TlsHandshakeAnimation from './TlsHandshakeAnimation'
 import VolumeAnimation from './VolumeAnimation'
+import WorkflowNodeFlowAnimation from './WorkflowNodeFlowAnimation'
+import WorkflowVsChatflowAnimation from './WorkflowVsChatflowAnimation'
+import ApiEmbedAnimation from './ApiEmbedAnimation'
+import StreamingSseAnimation from './StreamingSseAnimation'
 
 // chapter.animation 枚举 → 动画组件。未注册的值静默不渲染（向后兼容）。
 const ANIMATIONS: Record<string, ComponentType> = {
@@ -26,6 +30,10 @@ const ANIMATIONS: Record<string, ComponentType> = {
   'load-balancing': LoadBalancingAnimation,
   cache: CacheAnimation,
   'tls-handshake': TlsHandshakeAnimation,
+  'workflow-node-flow': WorkflowNodeFlowAnimation,
+  'workflow-vs-chatflow': WorkflowVsChatflowAnimation,
+  'api-embed': ApiEmbedAnimation,
+  'streaming-sse': StreamingSseAnimation,
 }
 
 export default function AnimationHost({ kind }: { kind: string }) {

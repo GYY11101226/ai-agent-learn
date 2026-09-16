@@ -28,5 +28,11 @@
     "title": "Nginx 从入门到精通",
     "description": "从反向代理、负载均衡到缓存、安全与生产化，边做边学 Web 服务器",
     "dir": "nginx"
+  },
+  {
+    "id": "dify",
+    "title": "Dify 从入门到精通",
+    "description": "从可视化编排到工作流/会话流嵌入第三方应用，边做边学接口封装",
+    "dir": "dify"
   }
 ]

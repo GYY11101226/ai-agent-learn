@@ -1,0 +1,68 @@
+{
+  "id": "module-0",
+  "title": "预备：Dify 心智模型",
+  "weeks": "第1周",
+  "prerequisites": "有 LLM / REST API 基础即可",
+  "chapters": [
+    {
+      "id": "0.1",
+      "title": "Dify 是什么：可视化 LLM 应用平台",
+      "goal": "能说清 Dify 是什么、解决什么问题，以及它相对写代码搭 Agent 的优势",
+      "diagram": "flowchart TD\n  A[\"可视化编排\"] --> B[\"搭建 AI 应用\"]\n  C[\"LLM 能力\"] --> A\n  B --> D[\"Chatbot / Agent / Workflow\"]\n  D --> E[\"多渠道接入：网页 / API / iframe\"]",
+      "concepts": [
+        {"name": "LLM 应用开发平台", "detail": "把大模型、知识库、工具、流程串成可用的 AI 应用，主要靠拖拽编排而非写代码。"},
+        {"name": "可视化编排", "detail": "用节点图搭应用逻辑，不必手工维护 prompt、工具调用与循环，改动即所见。"},
+        {"name": "开源自部署", "detail": "可 Docker 私有化部署，也可用云版；数据与编排留在自己环境，可控性强。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "对比「用 Python 手写 agentic loop」和「在 Dify 拖节点」实现同一个「问答 + 检索」场景，各列出你最头疼的一步。",
+      "quiz_topics": ["Dify 定位", "可视化编排", "自部署"]
+    },
+    {
+      "id": "0.2",
+      "title": "四大应用类型与两大编排模式",
+      "goal": "分清 Chatbot/文本生成/Agent/Workflow 四种应用，以及 Chatflow 与 Workflow 两种编排模式",
+      "diagram": "flowchart LR\n  A[\"应用类型\"] --> B[\"Chatbot 对话型\"]\n  A --> C[\"文本生成\"]\n  A --> D[\"Agent 智能体\"]\n  A --> E[\"Workflow 工作流\"]\n  B --> F[\"用 Chatflow 编排\"]\n  D --> F\n  E --> G[\"用 Workflow 编排\"]",
+      "concepts": [
+        {"name": "Chatflow（对话流）", "detail": "面向多轮对话的编排模式，含开始(聊天)、LLM、回答等节点，可接会话变量记上下文。"},
+        {"name": "Workflow（工作流）", "detail": "面向一次性任务的编排模式，输入跑一遍出结果就结束，适合审核、抽取、批量处理。"},
+        {"name": "四大应用类型", "detail": "Chatbot / 文本生成 / Agent / Workflow，决定成品的交互形态，编排模式随之而定。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "在 Dify 里新建应用时观察可选类型，说说「Agent 智能体」和「Chatbot 对话型」为何编排面板都用 Chatflow。",
+      "quiz_topics": ["Chatflow", "Workflow", "应用类型"]
+    },
+    {
+      "id": "0.3",
+      "title": "两种使用方式：界面直连 vs API 嵌入",
+      "goal": "能说清「在 Dify 界面内直接聊」与「通过 API 嵌入自己应用」的适用场景与差异",
+      "diagram": "flowchart TD\n  A[\"Dify 应用\"] --> B[\"界面直连：在 Dify 内聊\"]\n  A --> C[\"API 嵌入：接第三方应用\"]\n  C --> D[\"App API Key\"]\n  D --> E[\"自己网站的接口封装\"]\n  E --> F[\"最终用户无感使用\"]",
+      "concepts": [
+        {"name": "界面直连", "detail": "在 Dify 的 WebApp 里直接对话，适合演示与内部工具，无需写代码即可体验。"},
+        {"name": "API 嵌入", "detail": "第三方应用持 App API Key 调 Dify 接口，把 AI 能力藏进自己产品，用户无感。"},
+        {"name": "本课主线", "detail": "聚焦后者——把工作流/会话流封装成自己产品里的接口，是生产落地最常用的形态。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "找一个你常用、但后台很可能接了 LLM 的产品，猜猜它把模型调用藏在了哪个接口后面。",
+      "quiz_topics": ["界面直连", "API 嵌入", "App API Key"]
+    },
+    {
+      "id": "0.4",
+      "title": "部署与第一个应用：拿到 App API Key",
+      "goal": "独立完成部署/开通、建第一个 Chatbot、发布并拿到 App API Key 试调一次",
+      "diagram": "flowchart TD\n  A[\"部署 / 开通 Dify\"] --> B[\"新建 Chatbot 应用\"]\n  B --> C[\"编排对话流\"]\n  C --> D[\"发布\"]\n  D --> E[\"取 App API Key\"]\n  E --> F[\"curl 试调一次\"]",
+      "concepts": [
+        {"name": "部署方式", "detail": "云版注册即用；私有化用 docker compose 一键起；先在模型供应商里配好一个可用模型。"},
+        {"name": "App API Key", "detail": "每个应用一把，第三方调该应用接口时放在 Authorization: Bearer 请求头里。"},
+        {"name": "发布与调试", "detail": "先在界面聊通，再到「API 访问」页拿 key 与端点，才能对外提供接口。"}
+      ],
+      "code": "curl -X POST http://localhost/v1/chat-messages \\\n  -H \"Authorization: Bearer app-你的APIKey\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"inputs\":{},\"query\":\"你好\",\"response_mode\":\"blocking\",\"user\":\"demo\"}'",
+      "todo": "",
+      "exercise": "建好第一个 Chatbot 后，用界面「API 访问」给的 curl 示例跑通一次，记录返回 JSON 里 answer 字段的位置。",
+      "quiz_topics": ["部署", "App API Key", "chat-messages"]
+    }
+  ]
+}

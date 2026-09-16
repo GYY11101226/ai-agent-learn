@@ -1,0 +1,85 @@
+{
+  "id": "module-2",
+  "title": "核心编排：Workflow 与 Chatflow",
+  "weeks": "第3周",
+  "prerequisites": "完成 module-1，会用节点与变量",
+  "chapters": [
+    {
+      "id": "2.1",
+      "title": "Workflow 编排：节点串接与数据流",
+      "goal": "能说清变量沿节点连线流动，前一个节点的输出成为后一个节点的输入",
+      "diagram": "flowchart LR\n  A[\"开始\"] -->|输入| B[\"LLM\"]\n  B -->|生成结果| C[\"代码节点\"]\n  C -->|格式化后| D[\"结束\"]",
+      "animation": "workflow-node-flow",
+      "concepts": [
+        {"name": "数据沿连线流动", "detail": "每个节点读入引用变量、产出输出变量，连线只是把上一步的输出接到下一步的输入。"},
+        {"name": "引用变量", "detail": "节点里用 {{变量名}} 引用上游输出，改上游变量名会连锁影响所有下游节点。"},
+        {"name": "单次运行", "detail": "Workflow 从开始跑到结束即完成，是一次性任务，没有跨次状态需要管理。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "拖一条 Workflow，把 LLM 输出接到代码节点处理后再输出，记录每一步引用的变量名如何变化。",
+      "quiz_topics": ["Workflow 数据流", "变量引用", "单次运行"]
+    },
+    {
+      "id": "2.2",
+      "title": "Chatflow 编排：多轮对话与开始节点",
+      "goal": "能搭建多轮对话流，理解开始节点与 conversation_id 如何承载上下文",
+      "diagram": "flowchart TD\n  A[\"开始 聊天型\"] --> B[\"LLM 生成\"]\n  B --> C[\"回答用户\"]\n  C -.下一轮 query.-> A\n  D[\"conversation_id 会话\"] -.记忆.-> B",
+      "concepts": [
+        {"name": "开始(聊天)节点", "detail": "与 Workflow 的开始不同，它承载用户输入 query 与对话历史 sys.query 这类系统变量。"},
+        {"name": "多轮对话", "detail": "靠 conversation_id 把同一会话的多轮串起来，LLM 节点自动拿到历史上下文。"},
+        {"name": "会话变量记忆", "detail": "显式存用户偏好、名字这类跨轮状态，比把一切塞进历史更结构化、更可控。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "把 Chatbot 的 LLM 节点 prompt 引用 sys.query 与历史，发两轮对话观察第二轮能否接上第一轮语境。",
+      "quiz_topics": ["Chatflow", "conversation_id", "多轮对话"]
+    },
+    {
+      "id": "2.3",
+      "title": "Workflow vs Chatflow：何时用哪个",
+      "goal": "能根据任务是否多轮、是否有状态，正确选择编排模式",
+      "diagram": "flowchart TD\n  A[\"任务特征\"] --> B[\"一次性：审核 / 抽取 / 批量\"]\n  A --> C[\"多轮：客服 / 助手 / 问诊\"]\n  B --> D[\"用 Workflow\"]\n  C --> E[\"用 Chatflow\"]\n  D --> F[\"同步接口 /workflows/run\"]\n  E --> G[\"对话接口 /chat-messages\"]",
+      "animation": "workflow-vs-chatflow",
+      "concepts": [
+        {"name": "一次性用 Workflow", "detail": "输入明确、跑完给结果、不需要记住上次，如内容审核、字段抽取、批量评分。"},
+        {"name": "多轮用 Chatflow", "detail": "需要来回对话、依赖上下文，如客服、AI 助手、情感陪伴等交互形态。"},
+        {"name": "接口随之而定", "detail": "Workflow 走 /workflows/run 同步返回，Chatflow 走 /chat-messages 带 conversation_id。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "把下面三个场景归类：①银行卡号脱敏抽取 ②电商客服 ③合同风险点审查，说明各自该用哪种编排。",
+      "quiz_topics": ["编排选型", "Workflow 场景", "Chatflow 场景"]
+    },
+    {
+      "id": "2.4",
+      "title": "条件分支 / 问题分类 / 迭代",
+      "goal": "能给流加入分支路由与循环处理，处理更复杂的控制流",
+      "diagram": "flowchart TD\n  A[\"条件节点 判断\"] --> B[\"满足 → 分支1\"]\n  A --> C[\"不满足 → 分支2\"]\n  D[\"迭代节点\"] --> E[\"对列表每项处理\"]\n  E --> F[\"汇总输出\"]",
+      "concepts": [
+        {"name": "条件分支", "detail": "按变量比较结果走不同路径，一个流处理多种情况，而不是每种情况各搭一条流。"},
+        {"name": "问题分类节点", "detail": "特殊的条件分支，把用户意图分到不同下游（如售前、售后、投诉），各走各的 prompt。"},
+        {"name": "迭代节点", "detail": "对数组逐项执行同一段逻辑再汇总，适合批量处理列表数据，避免手写循环。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "加一个条件节点按「是否含关键词」把请求路由到两条不同 LLM prompt，验证两条路径都能走通。",
+      "quiz_topics": ["条件分支", "问题分类", "迭代节点"]
+    },
+    {
+      "id": "2.5",
+      "title": "代码节点与 HTTP 请求节点进阶",
+      "goal": "能用代码节点做前后处理、用 HTTP 节点串接外部服务，形成混合编排",
+      "diagram": "flowchart LR\n  A[\"输入\"] --> B[\"代码节点 Python 处理\"]\n  B --> C[\"HTTP 请求 外部服务\"]\n  C --> D[\"代码节点 清洗\"]\n  D --> E[\"结束 输出\"]",
+      "concepts": [
+        {"name": "代码节点", "detail": "内嵌一段 Python/JS 做变量转换、校验、组装，弥补节点图不擅长的精细逻辑。"},
+        {"name": "前后处理", "detail": "请求前清洗输入、请求后规整输出，常见于把外部接口返回裁成 LLM 需要的字段。"},
+        {"name": "混合编排", "detail": "代码 + HTTP + LLM + 分支组合，构成能落地业务的生产级流，各司其职。"}
+      ],
+      "code": "def main(payload: dict) -> dict:\n    # 代码节点入口固定接收 payload 字典，返回值作为节点输出\n    text = payload.get('raw', '').strip()\n    return {'cleaned': text[:500]}",
+      "todo": "",
+      "exercise": "写一个代码节点把上游 JSON 里嵌套的列表拍平，再喂给 LLM，体会「代码做苦力、模型做理解」的分工。",
+      "quiz_topics": ["代码节点", "前后处理", "混合编排"]
+    }
+  ]
+}
