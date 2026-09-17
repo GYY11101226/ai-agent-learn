@@ -1,0 +1,69 @@
+{
+  "id": "module-3",
+  "title": "扩展机制：Skills / MCP / Subagents / Plugins",
+  "weeks": "第4周",
+  "prerequisites": "完成 module-2，理解工具与权限",
+  "chapters": [
+    {
+      "id": "3.1",
+      "title": "Skills：封装可复用工作流",
+      "goal": "能把一套多步骤流程封装成 Skill，让模型按既定流程而非临场发挥",
+      "diagram": "flowchart LR\n  A[\"一段 word/markdown 指令\"] --> B[\"Skill\"]\n  B --> C[\"模型按流程执行\"]\n  D[\"/技能名 或自动触发\"] --> B",
+      "concepts": [
+        {"name": "Skill 是打包的流程", "detail": "一个目录装 SKILL.md 与相关资源，把「怎么做某事」的操作手册固化，模型调用后照章办事。"},
+        {"name": "触发有两种", "detail": "用户敲 /技能名 显式调用，或靠 description 让模型在合适场景自动判断是否该用。"},
+        {"name": "对比 CLAUDE.md", "detail": "CLAUDE.md 是常驻背景约束，Skill 是按需加载的专项流程——一个管底线，一个管具体动作。"}
+      ],
+      "code": "---\nname: deploy\ndescription: 用固定步骤发布到 staging\n---\n# 发布流程\n1. 跑 npm run build 2. 跑 npm test 3. 执行 ./deploy.sh staging",
+      "todo": "",
+      "exercise": "把你常做的一件多步手工活（如「发布前检查」）写成一个 Skill，分别用自动触发和 /技能名 两种方式调用验证。",
+      "quiz_topics": ["Skill 结构", "触发方式", "Skill vs CLAUDE.md"]
+    },
+    {
+      "id": "3.2",
+      "title": "MCP 服务器：接入外部工具与数据",
+      "goal": "能通过 MCP 给 Claude Code 接上外部工具或数据源，扩展它的感知边界",
+      "diagram": "flowchart LR\n  A[\"Claude Code\"] -->|MCP 协议| B[\"MCP Server\"]\n  B --> C[\"数据库 / API / 内部系统\"]\n  C --> B\n  B --> A",
+      "concepts": [
+        {"name": "MCP 是什么", "detail": "一套标准协议，让模型通过统一的「工具」视角去调用外部服务，而不必为每个系统写专用胶水。"},
+        {"name": "配置文件接入", "detail": "在 .mcp.json 里声明服务器与启动命令，模型即获得它暴露的工具列表，可被自主调用。"},
+        {"name": "三方生态", "detail": "官方与社区有大量现成 MCP 服务器（文件、浏览器、数据库、内部 API），先找现成的再自己写。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "挑一个你已有的内部数据源，用现成或自写的最小 MCP 服务器接进 Claude Code，让模型成功查询一次数据。",
+      "quiz_topics": ["MCP 协议", ".mcp.json", "工具暴露"]
+    },
+    {
+      "id": "3.3",
+      "title": "Subagents 子代理：并行与分工",
+      "goal": "能设计一个主从结构，把独立子任务分派给多个子代理并行处理",
+      "diagram": "flowchart TD\n  A[\"主代理 拆解任务\"] --> B[\"子代理 1 读模块A\"]\n  A --> C[\"子代理 2 读模块B\"]\n  A --> D[\"子代理 3 查文档\"]\n  B --> E[\"汇总结果给主代理\"]\n  C --> E\n  D --> E",
+      "animation": "subagent-parallel",
+      "concepts": [
+        {"name": "子代理是独立上下文", "detail": "每个子代理有自己干净的工作空间，互不干扰，适合把「读很多文件」这类脏活外包出去。"},
+        {"name": "并行省时", "detail": "多个互不依赖的搜索/阅读任务同时跑，主代理只收结论，不等串行，大幅缩短大任务耗时。"},
+        {"name": "自定义子代理", "detail": "在 .claude/agents/ 写 {name}.md 配置专业子代理，给它专属的 system prompt 与工具集。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "让 Claude Code 同时探索三个目录并各返回一句话结论，对比串行逐目录看和并行外包的速度差异。",
+      "quiz_topics": ["子代理独立上下文", "并行", ".claude/agents"]
+    },
+    {
+      "id": "3.4",
+      "title": "插件 Plugins：打包与分发",
+      "goal": "能说清插件的定位，并知道如何安装与使用一个插件",
+      "diagram": "flowchart LR\n  A[\"Skills + Agents + Commands + MCP\"] --> B[\"Plugin 打包\"]\n  B --> C[\"Marketplace 分发\"]\n  C --> D[\"/plugin 安装启用\"]",
+      "concepts": [
+        {"name": "插件是集合包", "detail": "把 skill、子代理、斜杠命令、MCP 配置打包成一个可分发单元，一条命令装齐一整套能力。"},
+        {"name": "市场分发", "detail": "插件可上市场共享，也能私有分发；用 /plugin 管理安装、启用与更新。"},
+        {"name": "渐进路线", "detail": "先裸 skill 跑通 → 多了再打包插件 → 需要分享再上市场，别一上来就为分享而建插件。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "把一个已有的 skill 打包成可安装的最小插件，在另一台机器或另一个项目里装上验证可用。",
+      "quiz_topics": ["插件构成", "/plugin", "打包分发"]
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "id": "module-2",
+  "title": "工具调用与权限",
+  "weeks": "第3周",
+  "prerequisites": "完成 module-1，会写 CLAUDE.md 与有效 prompt",
+  "chapters": [
+    {
+      "id": "2.1",
+      "title": "内置工具：Read / Write / Edit / Bash / Glob / Grep",
+      "goal": "能说出每个内置工具的用途，理解模型如何用它们定位与修改代码",
+      "diagram": "flowchart TD\n  A[\"Glob / Grep 找文件找符号\"] --> B[\"Read 读内容\"]\n  B --> C[\"Edit / Write 改内容\"]\n  C --> D[\"Bash 跑命令验证\"]",
+      "concepts": [
+        {"name": "读与搜分离", "detail": "Glob 按文件名模式找文件，Grep 按关键字搜内容，Read 打开具体文件——先用搜定位，再精读。"},
+        {"name": "Edit 精准改", "detail": "Edit 做字符串级替换，只动目标片段；Write 整体重写整个文件，适合新建或大改。"},
+        {"name": "Bash 验证", "detail": "Bash 让模型实际跑命令看结果，改完能自证「跑通了」，而不是嘴上说改好了。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "让 Claude Code 只用一个命令，找出所有定义 `login` 函数的文件并列出每个文件的行号，观察它用到了哪些搜读工具。",
+      "quiz_topics": ["Glob/Grep", "Edit 与 Write", "Bash 验证"]
+    },
+    {
+      "id": "2.2",
+      "title": "工具调用循环：决策 → 执行 → 反馈 → 再决策",
+      "goal": "能讲清一次工具往返的完整链路，以及为什么模型往往要跑多轮才收口",
+      "diagram": "flowchart LR\n  A[\"模型决策 要读哪个文件\"] --> B[\"发起 Read 调用\"]\n  B --> C[\"返回文件内容\"]\n  C --> D[\"模型再决策 怎么改\"]\n  D --> E[\"发起 Edit 调用\"]\n  E --> F[\"跑 Bash 验证\"]",
+      "animation": "tool-roundtrip",
+      "concepts": [
+        {"name": "三步一轮", "detail": "每一步都是「模型判断→调用工具→拿到结果」，结果又成为下一步判断的输入，如此往复。"},
+        {"name": "结果喂回上下文", "detail": "工具返回的内容写进上下文，模型据此修正下一步；看到测试红了，它才会去继续修。"},
+        {"name": "多轮才靠谱", "detail": "复杂任务很难一轮命中，看它多轮「改→跑→改」是正常的，不是它笨，是它在靠反馈收敛。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "让 Claude Code 改一个隐藏 bug（别告诉它位置），只观察它「读→猜→改→跑测试」的往返轮数，记录它卡在哪一步最久。",
+      "quiz_topics": ["工具往返", "反馈收敛", "多轮决策"]
+    },
+    {
+      "id": "2.3",
+      "title": "权限系统与 settings.json：ask / allow / deny",
+      "goal": "能配置 permissions 规则，在「安全」与「不被打断」之间取得平衡",
+      "diagram": "flowchart TD\n  A[\"模型要执行某操作\"] --> B{命中允许规则?}\n  B -->|allow| C[\"直接执行\"]\n  B -->|deny| D[\"直接拒绝\"]\n  B -->|未命中| E[\"ask 弹给你确认\"]",
+      "animation": "permission-flow",
+      "concepts": [
+        {"name": "allow / deny / ask", "detail": "settings.json 的 permissions 里给命令加 allow 白名单省去确认，deny 黑名单一票否决，其余走 ask。"},
+        {"name": "白名单要精准", "detail": "宁可按具体命令（npm run test:*(?）授权，也别一刀切 Bash(*) 全放开，否则等于关掉安全闸。"},
+        {"name": "先 deny 后 allow", "detail": "危险操作（git push --force、rm -rf）先写 deny 保底，再用 allow 放行确有需要的具体命令。"}
+      ],
+      "code": "{\n  \"permissions\": {\n    \"allow\": [\"Bash(npm run test:*)\", \"Read(~/.config/myapp/**)\"],\n    \"deny\": [\"Bash(git push --force:*)\", \"Bash(rm -rf:*)\"]\n  }\n}",
+      "todo": "",
+      "exercise": "给你的项目配一条 allow 规则，让「跑测试」的命令不再每次都弹确认，同时加一条 deny 拦住 git push --force，验证都生效。",
+      "quiz_topics": ["allow/deny/ask", "白名单精准", "先 deny 后 allow"]
+    },
+    {
+      "id": "2.4",
+      "title": "钩子 Hooks：生命周期拦截与自动化",
+      "goal": "能用一个 PreToolUse 钩子，在工具执行前自动校验或拦截",
+      "diagram": "flowchart TD\n  A[\"事件：工具即将执行\"] --> B[\"PreToolUse 钩子\"]\n  B --> C{校验通过?}\n  C -->|是| D[\"放行执行\"]\n  C -->|否| E[\"拦截并反馈\"]",
+      "concepts": [
+        {"name": "挂钩生命周期事件", "detail": "PreToolUse/PostToolUse、SessionStart、Stop 等事件都能挂脚本，在关键时刻插入自定义逻辑。"},
+        {"name": "PreToolUse 防错", "detail": "工具执行前触发，可兜住「别改 .env」「别越出某个目录」这类硬约束，比口头提醒更可靠。"},
+        {"name": "输出决定放行", "detail": "钩子输出的 JSON 判断是放行、阻断还是请示；脚本在系统层执行，模型改不了规则本身。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "写一个 PreToolUse 钩子，让任何试图读 .env 的操作都被拦截并提示原因，验证安全闸确实拦得住。",
+      "quiz_topics": ["Hooks 事件", "PreToolUse", "放行/阻断"]
+    }
+  ]
+}

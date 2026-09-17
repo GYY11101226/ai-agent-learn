@@ -34,5 +34,11 @@
     "title": "Dify 从入门到精通",
     "description": "从可视化编排到工作流/会话流嵌入第三方应用，边做边学接口封装",
     "dir": "dify"
+  },
+  {
+    "id": "claude-code",
+    "title": "Claude Code 从入门到精通",
+    "description": "从终端交互到 Skills/MCP/Subagents 扩展与生产化，边做边学 AI 编程助手，含避坑清单",
+    "dir": "claude-code"
   }
 ]

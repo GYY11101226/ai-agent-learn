@@ -15,6 +15,10 @@ import WorkflowNodeFlowAnimation from './WorkflowNodeFlowAnimation'
 import WorkflowVsChatflowAnimation from './WorkflowVsChatflowAnimation'
 import ApiEmbedAnimation from './ApiEmbedAnimation'
 import StreamingSseAnimation from './StreamingSseAnimation'
+import AgenticLoopAnimation from './AgenticLoopAnimation'
+import ToolRoundtripAnimation from './ToolRoundtripAnimation'
+import PermissionFlowAnimation from './PermissionFlowAnimation'
+import SubagentParallelAnimation from './SubagentParallelAnimation'
 
 // chapter.animation 枚举 → 动画组件。未注册的值静默不渲染（向后兼容）。
 const ANIMATIONS: Record<string, ComponentType> = {
@@ -34,6 +38,10 @@ const ANIMATIONS: Record<string, ComponentType> = {
   'workflow-vs-chatflow': WorkflowVsChatflowAnimation,
   'api-embed': ApiEmbedAnimation,
   'streaming-sse': StreamingSseAnimation,
+  'agentic-loop': AgenticLoopAnimation,
+  'tool-roundtrip': ToolRoundtripAnimation,
+  'permission-flow': PermissionFlowAnimation,
+  'subagent-parallel': SubagentParallelAnimation,
 }
 
 export default function AnimationHost({ kind }: { kind: string }) {

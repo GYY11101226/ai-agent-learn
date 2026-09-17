@@ -1,0 +1,69 @@
+{
+  "id": "module-0",
+  "title": "预备：Claude Code 心智模型",
+  "weeks": "第1周",
+  "prerequisites": "会命令行基本操作、用过任意 LLM 对话即可",
+  "chapters": [
+    {
+      "id": "0.1",
+      "title": "Claude Code 是什么：终端里的 AI 编程助手",
+      "goal": "能说清 Claude Code 是什么、和普通 AI 聊天/IDE 补全的区别，以及它解决什么问题",
+      "diagram": "flowchart TD\n  A[\"你的一句话需求\"] --> B[\"Claude Code\"]\n  B --> C[\"读代码 / 改文件 / 跑命令\"]\n  C --> D[\"交付可运行的结果\"]\n  D -.反馈再迭代.-> B",
+      "concepts": [
+        {"name": "Agentic 编程助手", "detail": "不像聊天工具只给答案，它会实际读你的代码库、改文件、执行命令，主动多步完成一个任务。"},
+        {"name": "以你的仓库为中心", "detail": "运行在项目目录里，直接理解现有代码、约定与文件结构，而不是在孤岛里空谈。"},
+        {"name": "三类能力来源", "detail": "底层是 Claude 模型，中间是工具调用循环，外围靠 CLAUDE.md/Hooks/MCP 等机制扩展与约束。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "对比一次你「问 ChatGPT 改 bug」和「让 Claude Code 直接改 bug」的体验差异，写下各自最省事/最费事的环节。",
+      "quiz_topics": ["Claude Code 定位", "agentic 助手", "与 IDE 补全的区别"]
+    },
+    {
+      "id": "0.2",
+      "title": "架构总览：模型 + 工具 + 循环 + 上下文",
+      "goal": "能画出 Claude Code 的核心心智模型：一个模型在上下文里循环调用工具，直到完成任务",
+      "diagram": "flowchart TD\n  A[\"用户请求\"] --> B[\"上下文 Context\"]\n  B --> C[\"模型 决策\"]\n  C -->|需要动手| D[\"调用工具\"]\n  D --> E[\"执行结果\"]\n  E --> C\n  C -->|已完成| F[\"回复用户\"]",
+      "animation": "agentic-loop",
+      "concepts": [
+        {"name": "上下文是工作记忆", "detail": "CLAUDE.md、当前会话、读到的文件、命令输出拼成模型的视野，视野越准，动作越准。"},
+        {"name": "循环是核心", "detail": "模型不是一次答完，而是「决策→调用工具→看结果」反复循环，直到任务收口，这就是 agentic loop。"},
+        {"name": "模型负责判断", "detail": "模型决定每一步读什么、改什么、跑什么；工具只负责执行，判断权始终在模型手里。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "口述一遍「让 Claude Code 给某个函数加单元测试」时，模型会经历哪些「决策→工具→看结果」的循环步骤。",
+      "quiz_topics": ["心智模型", "agentic loop", "上下文"]
+    },
+    {
+      "id": "0.3",
+      "title": "三类入口：CLI / Desktop / IDE 插件",
+      "goal": "能按场景选对入口，并独立在自己的机器上安装、启动 Claude Code",
+      "diagram": "flowchart LR\n  A[\"Claude Code\"] --> B[\"CLI 终端\"]\n  A --> C[\"Desktop 桌面应用\"]\n  A --> D[\"IDE 插件 VSCode / JetBrains\"]\n  E[\"web claude.ai/code\"] --> A",
+      "concepts": [
+        {"name": "CLI 终端", "detail": "在项目目录敲 claude 直接进入交互，适合重度终端用户、CI 与无头脚本，能力最全。"},
+        {"name": "IDE 插件", "detail": "嵌在编辑器里，边看 diff 边对话，改动的文件立刻可视化，适合日常开发主战场。"},
+        {"name": "Desktop 应用", "detail": "独立图形界面，免去终端与编辑器的配置，开箱即用，适合快速上手与轻量任务。"}
+      ],
+      "code": "npm install -g @anthropic-ai/claude-code\ncd your-project\nclaude",
+      "todo": "",
+      "exercise": "装好 CLI 后在自己的项目目录里启动 claude，确认能看到项目文件列表与当前模型，记录首次登录做了什么配置。",
+      "quiz_topics": ["入口选择", "安装", "启动"]
+    },
+    {
+      "id": "0.4",
+      "title": "第一个会话与基本交互",
+      "goal": "能在一次会话里完成「读代码→改一个函数→跑测试」，并会用基本快捷键与 / 命令",
+      "diagram": "flowchart LR\n  A[\"claude 进入\"] --> B[\"描述需求\"]\n  B --> C[\"模型读代码\"]\n  C --> D[\"改文件\"]\n  D --> E[\"跑测试验证\"]\n  E --> F[\"确认交付\"]",
+      "concepts": [
+        {"name": "自然语言下指令", "detail": "用一句目标清晰的话开头（做什么、约束是什么、怎么算完成），比堆技术名词更有效。"},
+        {"name": "权限确认", "detail": "模型改文件/跑命令前会请求许可，你按需允许或拒绝，这是防误操作的第一道闸。"},
+        {"name": "/help 与快捷键", "detail": "/help 看全部命令；Esc 中断当前生成，再输入继续追加；↑↓ 翻历史。先用熟这仨。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "挑一个真实函数，让 Claude Code 加个参数校验并跑通已有测试，全程观察它每一次要权限时你做了什么选择。",
+      "quiz_topics": ["基本交互", "权限确认", "/help 与快捷键"]
+    }
+  ]
+}

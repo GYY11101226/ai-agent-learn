@@ -1,0 +1,68 @@
+{
+  "id": "module-4",
+  "title": "自动化与生产化",
+  "weeks": "第5周",
+  "prerequisites": "完成 module-3，掌握扩展机制",
+  "chapters": [
+    {
+      "id": "4.1",
+      "title": "无头模式 headless：脚本化运行与 CI",
+      "goal": "能用 claude -p 在无人值守的脚本或 CI 里跑一次性任务，拿到结构化输出",
+      "diagram": "flowchart LR\n  A[\"claude -p 需求\"] --> B[\"非交互执行\"]\n  B --> C[\"打印结果到 stdout\"]\n  C --> D[\"脚本 / CI 拿去用\"]",
+      "concepts": [
+        {"name": "-p 一次性提问", "detail": "claude -p \"要做什么\" 非交互地跑一次就返回，输出走 stdout，适合嵌进脚本与流水线。"},
+        {"name": "non-interactive 标志", "detail": "CI 里加 ANTHROPIC_API_KEY 环境变量并带上 --output-format 等参数，全自动跑完不等人点确认。"},
+        {"name": "威力与边界", "detail": "无头模式能改文件也能只跑只读分析，但自动执行意味着权限默认放宽，务必先设好 deny 保底。"}
+      ],
+      "code": "claude -p \"把 src/ 里所有 TODO 列成清单，输出 markdown\" \\\n  --output-format text",
+      "todo": "",
+      "exercise": "写一个 shell 脚本，用 claude -p 总结一次 git diff 的改动风险，把输出落盘成 report.md，并放进你的 CI 流水线试跑。",
+      "quiz_topics": ["claude -p", "非交互标志", "结构输出到 stdout"]
+    },
+    {
+      "id": "4.2",
+      "title": "Agent SDK：以编程方式调用",
+      "goal": "能用一个几行的 SDK 脚本启动 Claude Code 会话，区分它与直接调 API 的差异",
+      "diagram": "flowchart LR\n  A[\"你的 Python/TS 程序\"] --> B[\"Claude Agent SDK\"]\n  B --> C[\"Claude Code 会话\"]\n  C --> D[\"收流式结果 / 回调\"]",
+      "concepts": [
+        {"name": "SDK 复用整套能力", "detail": "SDK 把 Claude Code 的权限、工具、hooks 全带进你的程序，而不是裸调 API 自己拼 agentic loop。"},
+        {"name": "流式回调", "detail": "订阅 onMessage/onResult 回调，逐条拿模型产出与工具调用，做成可交互的产品或后台任务。"},
+        {"name": "何时用 SDK", "detail": "要把它嵌进自己的应用/服务时用 SDK；只是脚本里跑一次，claude -p 更轻，别为用 SDK 而用。"}
+      ],
+      "code": "from claude_agent_sdk import query\nasync for msg in query(prompt=\"跑一遍测试\", cwd=\"/repo\"):\n    print(msg.type, msg.content)",
+      "todo": "",
+      "exercise": "用 SDK 写一个最小程序，让 Claude Code 在你的仓库里做一次「找并列出未使用导入」，把每条工具调用打印出来观察。",
+      "quiz_topics": ["Agent SDK", "流式回调", "SDK vs claude -p"]
+    },
+    {
+      "id": "4.3",
+      "title": "CI/CD 集成与代码评审",
+      "goal": "能把 Claude Code 接进 PR 流程，自动做评审或批量生成测试",
+      "diagram": "flowchart TD\n  A[\"PR 触发\"] --> B[\"CI 跑 Claude Code\"]\n  B --> C[\"评审注释 / 生成测试\"]\n  C --> D[\"结果注入 PR 评论\"]",
+      "concepts": [
+        {"name": "典型用法", "detail": "评审 PR 差异、补缺失测试、查安全隐患，把结果作为 bot 评论或检查项返回，人只做终审。"},
+        {"name": "用 diff 而非全库", "detail": "把 git diff 喂给它做增量评审，比让它通读全库快得多也准得多，成本与噪声都低。"},
+        {"name": "人是最终决策", "detail": "CI 里让它「提建议」而非「直接合入」，自动改主分支前仍要人工门禁，安全底线不可外包。"}
+      ],
+      "code": "git diff origin/main...HEAD | claude -p \"逐条找出这段 diff 里的 bug 与安全风险，标注出 file:line\"",
+      "todo": "",
+      "exercise": "给一个真实 PR 写条 CI job，让 Claude Code 评审 `git diff` 并把结论作为评论贴到 PR 上（可用 gh CLI 透传）。",
+      "quiz_topics": ["PR 评审接入", "git diff 增量", "人工终审"]
+    },
+    {
+      "id": "4.4",
+      "title": "成本、模型选择与可观测",
+      "goal": "能看懂用量、按任务挑模型，并为关键会话留下可回溯的观测",
+      "diagram": "flowchart TD\n  A[\"任务性质\"] --> B[\"简单 → 小/快模型\"]\n  A --> C[\"复杂 → 强模型\"]\n  D[\"用量与成本\"] --> E[\"看 usage / 会话统计\"]\n  E --> F[\"异常时回溯定位\"]",
+      "concepts": [
+        {"name": "按任务挑模型", "detail": "机械的检索、整理用小模型，核心设计、疑难排查用强模型；日常别无脑锁最强模型烧钱。"},
+        {"name": "看用量", "detail": "关注 token 用量与成本趋势，长会话/大上下文是隐形大头，及时 /compact 既是省上下文也是省成本。"},
+        {"name": "可观测", "detail": "关键操作让日志带上会话、文件、命令与结果，出问题时能复盘到「哪一步做了什么」。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "记录你一周内用 Claude Code 处理的五类任务，给每类标注「该用哪个模型」并估算整体成本，说说能省在哪。",
+      "quiz_topics": ["模型选择", "token 成本", "可观测与回溯"]
+    }
+  ]
+}

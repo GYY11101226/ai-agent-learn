@@ -1,0 +1,83 @@
+{
+  "id": "module-1",
+  "title": "上下文工程：CLAUDE.md 与 Prompt",
+  "weeks": "第2周",
+  "prerequisites": "完成 module-0，会用 Claude Code 跑通一次小任务",
+  "chapters": [
+    {
+      "id": "1.1",
+      "title": "CLAUDE.md：给模型的项目记忆",
+      "goal": "能写出有效的 CLAUDE.md，让模型每次会话都带上项目约定的上下文",
+      "diagram": "flowchart TD\n  A[\"全局 ~/.claude/CLAUDE.md\"] --> C[\"模型每次启动的上下文\"]\n  B[\"项目仓库 CLAUDE.md\"] --> C\n  C --> D[\"约束命令 / 约定 / 禁忌\"]",
+      "concepts": [
+        {"name": "两级记忆", "detail": "全局 ~/.claude/CLAUDE.md 管所有项目共性，仓库根目录 CLAUDE.md 管本项目约定，两者叠加进每次会话。"},
+        {"name": "写行为不写情书", "detail": "有效内容=命令怎么跑、代码风格、目录结构、红线禁忌，而不是长篇大论的背景介绍。"},
+        {"name": "越界先说明", "detail": "明确「不自动 git push」「改密钥前先问我」这类红线，模型读到就会主动停下等你确认。"}
+      ],
+      "code": "# CLAUDE.md\n# 命令：npm run test 跑单测，npm run lint 查风格\n# 红线：不自动 git commit/push；改 .env 前必须先问",
+      "todo": "",
+      "exercise": "给你的项目写一份 10 行以内的 CLAUDE.md，包含一条构建命令、一条代码约定、一条红线禁忌，然后让它照约定干活验证是否生效。",
+      "quiz_topics": ["CLAUDE.md", "两级记忆", "红线约定"]
+    },
+    {
+      "id": "1.2",
+      "title": "Prompt 技巧：结论先行、精确上下文、引用文件",
+      "goal": "能写出高命中率的需求描述，减少模型的来回试探",
+      "diagram": "flowchart LR\n  A[\"结论先行：要什么结果\"] --> B[\"给上下文：哪个文件哪段逻辑\"]\n  B --> C[\"给约束：不能碰什么\"]\n  C --> D[\"给验收：怎么算完成\"]",
+      "concepts": [
+        {"name": "结论先行", "detail": "第一句就说清最终要什么，模型才不绕弯；细节放后面补充，别把目标埋在长文末尾。"},
+        {"name": "精确引用", "detail": "直接说「src/store.py 的 save 函数」，比「存储那块」强得多；或 @文件 把内容喂进上下文。"},
+        {"name": "给验收标准", "detail": "「跑通 npm test 且不新增告警」这类可验证的完成标准，让模型有明确的收口信号。"}
+      ],
+      "code": "# 差：帮我修一下登录\n# 好：shop/login.py 的 login() 在密码错误时没返回 401，\n#     修成抛 Unauthorized 且不碰其他文件，跑 pytest tests/test_login.py",
+      "todo": "",
+      "exercise": "把同一个需求分别用「一句话模糊版」和「结论+上下文+验收版」各发一次，对比模型的试探次数和结果质量。",
+      "quiz_topics": ["结论先行", "精确引用", "验收标准"]
+    },
+    {
+      "id": "1.3",
+      "title": "斜杠命令：/init /memory /clear /compact",
+      "goal": "能熟练用常用斜杠命令管理会话与项目初始化",
+      "diagram": "flowchart TD\n  A[\"/init 生成 CLAUDE.md\"] --> D[\"常用斜杠命令\"]\n  B[\"/memory 管理记忆\"] --> D\n  C[\"/clear 清会话 /compact 压缩\"] --> D",
+      "concepts": [
+        {"name": "/init 初始化", "detail": "扫描项目生成一份 CLAUDE.md 骨架，再手动删改，比从零写快，是进新仓库的第一步。"},
+        {"name": "/memory 与 /clear", "detail": "/memory 看/编辑持久记忆；/clear 清空当前会话重新开始；/compact 压缩长会话释放上下文。"},
+        {"name": "自定义命令", "detail": "在 .claude/commands/ 放 markdown 文件即可新增自定义斜杠命令，把高频提示词固化成 /xx。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "对一个陌生仓库跑 /init，观察它生成的 CLAUDE.md 抓到了哪些关键信息，再补上它漏掉的构建命令。",
+      "quiz_topics": ["/init", "/memory", "/clear 与 /compact"]
+    },
+    {
+      "id": "1.4",
+      "title": "模式选择：权限模式、fast 模式、模型选择",
+      "goal": "能按任务风险与质量要求选对运行模式与模型",
+      "diagram": "flowchart LR\n  A[\"permission 权限模式\"] --> D[\"运行配置\"]\n  B[\"/fast 快速模式\"] --> D\n  C[\"/model 模型选择\"] --> D",
+      "concepts": [
+        {"name": "权限模式", "detail": "默认逐次请求许可；plan 只读规划不动手；acceptEdits 自动接受编辑；bypassPermissions 跳过确认（高危，慎用）。"},
+        {"name": "/fast 与 /model", "detail": "/fast 切换快速输出模式；/model 换模型，简单任务用小模型省钱，复杂任务上强模型保质量。"},
+        {"name": "按风险选", "detail": "读多改少的探索用宽松模式，删文件/改配置/跑危险命令务必留在逐次确认，别一刀切放开。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "对比在默认模式与 /fast 模式下让模型做同一件小改动的速度与质量差，说说什么时候你会选 fast。",
+      "quiz_topics": ["权限模式", "/fast", "/model"]
+    },
+    {
+      "id": "1.5",
+      "title": "会话管理：resume、继续、长任务",
+      "goal": "能在中断/过长会话后无损恢复，理解上下文随会话增长的代价",
+      "diagram": "flowchart TD\n  A[\"claude --continue 继续上次\"] --> C[\"会话生命线\"]\n  B[\"claude --resume 选历史会话\"] --> C\n  C --> D[\"越聊越长 → 上下文占用越多\"]",
+      "concepts": [
+        {"name": "resume 与 continue", "detail": "--continue 接着上一次会话继续，--resume 列出历史会话可选，中断后不丢上下文。"},
+        {"name": "上下文会累", "detail": "会话越长，历史占的上下文越多，模型可能开始顾头不顾尾——该 /compact 就压缩，该 /clear 就另起。"},
+        {"name": "一任务一会话", "detail": "一个会话专注一件事，做完就开新会话；把多件无关事塞进一个会话，是上下文污染的开始。"}
+      ],
+      "code": "claude --continue    # 继续最近一次会话\nclaude --resume      # 从历史会话里挑一个恢复",
+      "todo": "",
+      "exercise": "开始一个会话完成两件互不相关的事，观察第二件是否比新开会话时更易出错，验证「一任务一会话」的必要性。",
+      "quiz_topics": ["resume", "--continue", "会话隔离"]
+    }
+  ]
+}
