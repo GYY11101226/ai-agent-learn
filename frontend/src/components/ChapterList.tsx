@@ -17,7 +17,8 @@ export default function ChapterList({
         {module.chapters.map((ch) => (
           <li key={ch.id} className="chapter">
             <Link to={`/course/${courseId}/lesson/${ch.id}`}>
-              {ch.id} · {ch.title}
+              <span className="chapter-id">{ch.id}</span>
+              <span className="chapter-title">{ch.title}</span>
             </Link>
             <span
               className={ch.done ? 'badge done' : ch.mastery > 0 ? 'badge mid' : 'badge'}
