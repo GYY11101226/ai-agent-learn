@@ -1,0 +1,69 @@
+{
+  "id": "module-2",
+  "title": "流式输出",
+  "weeks": "第3周",
+  "prerequisites": "完成 module-1，能跑通一次非流式调用",
+  "chapters": [
+    {
+      "id": "2.1",
+      "title": "为什么要流式：首字延迟与长输出",
+      "goal": "能说清同步与流式的本质区别，以及什么场景必须用流式",
+      "diagram": "flowchart TD\n  A[\"同步 blocking\"] --> B[\"等全部生成完一次返回 → 首字慢\"]\n  C[\"流式 streaming\"] --> D[\"SSE 分块边生边推 → 首字快\"]\n  D --> E[\"前端像打字机一样渲染\"]",
+      "animation": "streaming-sse",
+      "concepts": [
+        {"name": "同步等于等待", "detail": "等模型把整段全生成完才一次返回，逻辑简单，但第一个字要等最长时间。"},
+        {"name": "流式等于边生边推", "detail": "SSE 把内容一截一截推过来，收到第一块就能渲染，体验像打字机。"},
+        {"name": "何时必须流式", "detail": "长输出、实时对话、给前端做打字机效果时用流式，还能避开长请求的超时。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "让模型生成一段约 500 字的长文，分别用同步和流式各跑一次，用秒表记录「第一个字出现的延迟」差多少。",
+      "quiz_topics": ["同步 vs 流式", "首字延迟", "SSE"]
+    },
+    {
+      "id": "2.2",
+      "title": "OpenAI 兼容的 SSE 流式解析",
+      "goal": "能用 stream=True 逐块拿到 delta.content，正确拼接完整回复并识别结束",
+      "diagram": "flowchart LR\n  A[\"stream=True\"] --> B[\"每个 chunk 带 delta.content\"]\n  B --> C[\"逐块 append 拼接\"]\n  B --> D[\"收尾读到 [DONE]\"]",
+      "concepts": [
+        {"name": "stream=True 换形态", "detail": "返回从「一个完整响应」变成 SSE 事件流，每一行 data:{...} 是一个增量块。"},
+        {"name": "增量在 delta.content", "detail": "每个 chunk 只在 choices[0].delta.content 里带一截文本，可能是空串，需判空再拼。"},
+        {"name": "结束看 [DONE]", "detail": "收到 data: [DONE] 代表结束；usage 常只在最后一个块出现，别在半路读它。"}
+      ],
+      "code": "stream = client.chat.completions.create(\n    model=\"deepseek-v4-pro\",\n    messages=[{\"role\": \"user\", \"content\": \"讲一个 100 字的小故事\"}],\n    stream=True,          # 关键开关\n)\n\nfull = \"\"\nfor chunk in stream:\n    delta = chunk.choices[0].delta.content\n    if delta:\n        full += delta\n        print(delta, end=\"\", flush=True)   # 边收边打\nprint(\"\\n--- 拼好的完整回复长度：\", len(full))",
+      "todo": "",
+      "exercise": "把上面循环改成「收集所有 delta 到列表，最后 join 成一行」的写法，对比两种写法得到的结果是否一致。",
+      "quiz_topics": ["stream=True", "delta.content", "DONE"]
+    },
+    {
+      "id": "2.3",
+      "title": "Anthropic 的流式：stream 与增量事件",
+      "goal": "能用 anthropic SDK 的 stream 拿到增量文本，理解它与 OpenAI 兼容流的差异",
+      "diagram": "flowchart LR\n  A[\"client.messages.stream\"] --> B[\"逐事件推送\"]\n  B --> C[\"text_stream 拿增量\"]\n  B --> D[\"get_final_message 收完整\"]",
+      "concepts": [
+        {"name": "用 stream 上下文", "detail": "打开 client.messages.stream(...)，在语义内既可用 text_stream 拿增量，也能 get_final_message 收完整消息。"},
+        {"name": "增量在 text_stream", "detail": "Anthropic 文本增量走 text_stream 事件流，不是 OpenAI 的 delta.content，字段名不同。"},
+        {"name": "事件粒度更细", "detail": "思考、工具调用、文本各是独立的内容块事件，好在 SDK 已按类型归类好，text_stream 只取文本。"}
+      ],
+      "code": "with client.messages.stream(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": \"讲一个 100 字的小故事\"}],\n) as stream:\n    for text in stream.text_stream:\n        print(text, end=\"\", flush=True)   # 增量文本\n    message = stream.get_final_message()  # 完整消息（含 usage / stop_reason）\nprint(\"\\nstop_reason：\", message.stop_reason)",
+      "todo": "",
+      "exercise": "把同一段故事分别用 OpenAI 兼容流和 Anthropic 流各取一次，对比两者「拿增量文本」这一步代码有哪些不同。",
+      "quiz_topics": ["messages.stream", "text_stream", "get_final_message"]
+    },
+    {
+      "id": "2.4",
+      "title": "增量拼接与收尾：finish_reason / stop_reason / usage",
+      "goal": "能正确读收尾字段判断正常结束、被截断还是要调工具，并拿到最终 usage",
+      "diagram": "flowchart TD\n  A[\"逐块增量\"] --> B[\"按序 append 拼接全文\"]\n  B --> C[\"读收尾字段\"]\n  C --> D[\"end_turn 正常结束\"]\n  C --> E[\"max_tokens 被截断\"]\n  C --> F[\"tool_use 要调工具\"]",
+      "concepts": [
+        {"name": "按序拼接", "detail": "把每个增量 append 进 buffer，顺序错一个字就乱；flush 出手感，让用户看见进度。"},
+        {"name": "两套收尾字段", "detail": "OpenAI 用 finish_reason、Anthropic 用 stop_reason，取值是 end_turn/max_tokens/tool_use 这类。"},
+        {"name": "max_tokens 要警觉", "detail": "收尾是 max_tokens 说明回答被掐断，要加大上限或改流式重来，别拿残句当完整结果。"}
+      ],
+      "code": "message = stream.get_final_message()\nprint(\"stop_reason：\", message.stop_reason)   # end_turn / max_tokens / tool_use ...\nprint(\"输出 token：\", message.usage.output_tokens)\nif message.stop_reason == \"max_tokens\":\n    print(\"⚠️ 回答被截断，需要加大 max_tokens\")",
+      "todo": "",
+      "exercise": "故意给一个很小的 max_tokens，让生成被截断，观察 stop_reason 是否变成 max_tokens，再加大恢复。",
+      "quiz_topics": ["拼接", "finish_reason/stop_reason", "max_tokens 截断"]
+    }
+  ]
+}

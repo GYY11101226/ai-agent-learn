@@ -40,5 +40,11 @@
     "title": "Claude Code 从入门到精通",
     "description": "从终端交互到 Skills/MCP/Subagents 扩展与生产化，边做边学 AI 编程助手，含避坑清单",
     "dir": "claude-code"
+  },
+  {
+    "id": "llm",
+    "title": "大语言模型 从入门到精通",
+    "description": "从请求响应与 token 到流式、工具调用、结构化输出与生产化，边做边学 LLM 接口调用（OpenAI 兼容 + Anthropic 双协议）",
+    "dir": "llm"
   }
 ]

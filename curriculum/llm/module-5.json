@@ -1,0 +1,68 @@
+{
+  "id": "module-5",
+  "title": "健壮性与生产化",
+  "weeks": "第6周",
+  "prerequisites": "完成 module-4，会工具调用、结构化输出与缓存",
+  "chapters": [
+    {
+      "id": "5.1",
+      "title": "错误分类与处理链条",
+      "goal": "能把错误分成可重试 / 不可重试两类，并写出从具体到宽泛的异常链",
+      "diagram": "flowchart TD\n  A[\"请求异常\"] --> B[\"鉴权/参数错 4xx\"]\n  A --> C[\"限流 429 / 服务端 5xx / 网络\"]\n  B --> D[\"不可重试 → 快速失败\"]\n  C --> E[\"可重试 → 退避重试\"]",
+      "concepts": [
+        {"name": "两类错误", "detail": "4xx（除 429）是「你的问题」，改了才有救，别重试；429/5xx/网络是「暂时的」，值得重试。"},
+        {"name": "异常链由细到粗", "detail": "先 catch 具体类（RateLimitError / NotFoundError）再 catch 宽泛类，别一把 APIError 全兜、把两类混为一谈。"},
+        {"name": "拿重试秒数", "detail": "限流响应常带 retry-after 头，照它给的间隔退避，比拍脑袋更省心。"}
+      ],
+      "code": "import anthropic\n\ntry:\n    resp = client.messages.create(...)\nexcept anthropic.BadRequestError as e:\n    print(\"请求本身有问题，别重试:\", e.message)\nexcept anthropic.RateLimitError as e:\n    retry_after = int(e.response.headers.get(\"retry-after\", \"60\"))\n    print(f\"被限流，{retry_after} 秒后再试\")\nexcept anthropic.APIStatusError as e:\n    print(\"服务端错误\" if e.status_code >= 500 else \"其他 API 错误\")",
+      "todo": "",
+      "exercise": "故意传一个错误参数触发 4xx，再传一个假 key 触发鉴权错，确认两者都被各自的 except 分支捕获、且不会去重试。",
+      "quiz_topics": ["可重试 vs 不可重试", "异常链", "retry-after"]
+    },
+    {
+      "id": "5.2",
+      "title": "重试与指数退避",
+      "goal": "能说清 SDK 默认会重试什么、何时需要自写退避，并写一个带抖动的指数退避",
+      "diagram": "flowchart LR\n  A[\"失败\"] --> B[\"等待 base×2^n + 抖动\"]\n  B --> C[\"重试\"]\n  C -->|仍失败| B\n  C -->|达上限| D[\"放弃并记录\"]",
+      "concepts": [
+        {"name": "SDK 已内置重试", "detail": "连接错误、429、5xx 默认自动重试（约 2 次）并指数退避，多数场景根本不用自己写。"},
+        {"name": "指数退避公式", "detail": "delay = base × 2^n + 随机抖动，越往后等越久；抖动避免一堆请求同时重试引发雪崩。"},
+        {"name": "区分终局错误", "detail": "4xx 这类再重试也没用，要快速失败并记日志，别让它拖着占用资源。"}
+      ],
+      "code": "import time, random\n\ndef call_with_retry(fn, max_retries=5, base=1.0, cap=60.0):\n    for n in range(max_retries):\n        try:\n            return fn()\n        except anthropic.RateLimitError:\n            pass                     # 429 可重试，进入退避\n        except anthropic.APIStatusError as e:\n            if e.status_code < 500:\n                raise                # 终局错误，别重试\n        delay = min(base * (2 ** n) + random.uniform(0, 1), cap)\n        print(f\"第 {n+1} 次重试，等待 {delay:.1f}s\")\n        time.sleep(delay)\n    raise RuntimeError(\"重试耗尽\")",
+      "todo": "",
+      "exercise": "把上面的退避函数接到一个真实调用上，观察 429 或网络抖动时它是否会按越来越长的间隔重试。",
+      "quiz_topics": ["SDK 默认重试", "指数退避", "抖动"]
+    },
+    {
+      "id": "5.3",
+      "title": "统一调用抽象：一块适配层屏蔽双协议",
+      "goal": "能设计一个函数把 OpenAI 兼容与 Anthropic 的差异封装到一处，上层只认一个接口",
+      "diagram": "flowchart TD\n  A[\"业务层\"] --> B[\"统一 chat(msgs, tools, ...)\"]\n  B --> C[\"适配层分发\"]\n  C -->|provider=openai| D[\"OpenAI 兼容实现\"]\n  C -->|provider=anthropic| E[\"Anthropic 实现\"]",
+      "concepts": [
+        {"name": "上层只认一种形状", "detail": "业务代码不关心底层是谁，只调一个 chat() / stream()；换供应商时业务零改动。"},
+        {"name": "适配层吃差异", "detail": "key、端点、字段名、工具/流式/结构化格式的差异全部在适配层消化，边界清晰。"},
+        {"name": "本仓库即范例", "detail": "src/agents.py 按 LLM_PROVIDER 分发到 _ask_anthropic / _ask_openai_compatible，上层 Tutor/Grader 不变。"}
+      ],
+      "code": "def chat(messages, tools=None):\n    \"\"\"统一入口：按 provider 分派到底层实现。\"\"\"\n    if config.LLM_PROVIDER == \"anthropic\":\n        return _chat_anthropic(messages, tools)       # /v1/messages\n    return _chat_openai_compatible(messages, tools)   # /chat/completions\n\n# 上层只调 chat()，不关心底层用的是哪家协议\ntext = chat([{\"role\": \"user\", \"content\": \"你好\"}])",
+      "todo": "",
+      "exercise": "画出你目前用到的所有 LLM 功能（普通、流式、工具、结构化），看哪些该收进统一的 chat() 接口、哪些该单独留出。",
+      "quiz_topics": ["适配层", "双协议分发", "统一接口"]
+    },
+    {
+      "id": "5.4",
+      "title": "实战：封装一个可复用 LLM 客户端",
+      "goal": "能把前五周所学拼成一个可复用的客户端函数：流式 + 工具 + 错误处理 + 缓存提示",
+      "diagram": "flowchart TD\n  A[\"输入 messages\"] --> B[\"client(config) 构造\"]\n  B --> C[\"组装参数/缓存/工具\"]\n  C --> D[\"开流式\"]\n  C --> E[\"错误分类重试\"]\n  D --> F[\"返回最终结果\"]\n  E --> F",
+      "concepts": [
+        {"name": "把散点串成整体", "detail": "构造 client、组 messages、开流式、处理错误，都是前面各章的零件，现在拼成一个函数。"},
+        {"name": "配置外置", "detail": "key / base_url / 模型都从 .env 读，代码里不写死，换供应商只改配置不改代码。"},
+        {"name": "收口标准", "detail": "能跑通一次「带工具的流式多轮」且出错时能分类重试，就是达到了生产可用。"}
+      ],
+      "code": "import os\nfrom openai import OpenAI\n\nclient = OpenAI(\n    api_key=os.getenv(\"OPENAI_API_KEY\"),\n    base_url=os.getenv(\"OPENAI_BASE_URL\"),\n)\n\ndef chat_stream(messages, tools=None):\n    \"\"\"一个可复用的流式调用：工具会在上层 loop 里回填后再次调用。\"\"\"\n    stream = client.chat.completions.create(\n        model=os.getenv(\"OPENAI_MODEL\"),\n        messages=messages,\n        tools=tools,\n        stream=True,\n    )\n    for chunk in stream:\n        delta = chunk.choices[0].delta.content\n        if delta:\n            yield delta       # 边生边吐给前端/上层",
+      "todo": "把前五周的代码拼成你自己的 chat() 函数：支持流式 + 工具回填 + 分类重试，全部配置从 .env 读，跑通一段「带工具的多轮对话」。",
+      "exercise": "给你封装好的客户端加一层缓存标记（稳定 system 加 cache_control），再补上 429 重试，验证在重复请求下更省。",
+      "quiz_topics": ["客户端封装", "配置外置", "收口标准"]
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "id": "module-4",
+  "title": "结构化输出与成本控制",
+  "weeks": "第5周",
+  "prerequisites": "完成 module-3，会写 JSON Schema 与工具调用",
+  "chapters": [
+    {
+      "id": "4.1",
+      "title": "为何要结构化输出：从「告白文本」到 JSON",
+      "goal": "能说清程序里为什么需要 JSON 而非自然语言，以及两类结构化做法",
+      "diagram": "flowchart TD\n  A[\"模型自由回答\"] --> B[\"口语文本 → 难解析脆弱\"]\n  C[\"结构化约束\"] --> D[\"合法 JSON → 直接 json.loads 取字段\"]",
+      "concepts": [
+        {"name": "程序要机器可读", "detail": "下游要的是 dict 而非一段口语答案，直接解析才稳定，正则抠文本早晚会崩。"},
+        {"name": "两类做法", "detail": "一种靠提示词约定「请输出 JSON」，一种靠平台强约束（json mode / structured output）。"},
+        {"name": "约束比约定稳", "detail": "约定靠模型自觉、会漏；json mode 由 API 层强制，能保证输出是合法 JSON，更可靠。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "让模型「不做任何约束」地用自然语言回答一个要抽字段的问题，再让它「按 JSON 输出」，体会两种结果解析起来的差别。",
+      "quiz_topics": ["结构化动机", "约定 vs 约束", "json mode"]
+    },
+    {
+      "id": "4.2",
+      "title": "OpenAI 兼容的 json mode",
+      "goal": "能用 response_format 拿到合法 JSON，理解为什么 prompt 里仍要出现 json 字样",
+      "diagram": "flowchart LR\n  A[\"response_format:{type:json_object}\"] --> B[\"模型输出合法 JSON\"]\n  B --> C[\"json.loads 解析\"]\n  C --> D[\"抽字段 + 校验防漏\"]",
+      "concepts": [
+        {"name": "response_format 开 json 模式", "detail": "传 {\"type\":\"json_object\"} 开启，保证输出是合法 JSON（新版还有 json_schema 可进一步定结构）。"},
+        {"name": "prompt 里要带 json", "detail": "多数实现要求指令里明示「输出 JSON」，否则会报错——先提一句再开开关。"},
+        {"name": "合法≠字段齐全", "detail": "拿到合法 JSON 仍要 json.loads 后自查关键字段，缺了要么重试要么补默认值。"}
+      ],
+      "code": "resp = client.chat.completions.create(\n    model=\"deepseek-v4-pro\",\n    messages=[{\"role\": \"user\",\n               \"content\": \"判断情感，输出 JSON：{\\\"label\\\": ..., \\\"confidence\\\": ...}\\n文本：这电影太棒了\"}],\n    response_format={\"type\": \"json_object\"},   # 开启 json 模式\n)\nimport json\ndata = json.loads(resp.choices[0].message.content)\nprint(data[\"label\"], data[\"confidence\"])",
+      "todo": "",
+      "exercise": "用 json mode 让模型把一段产品评论抽成 {pros:[], cons:[]}，连续跑 5 次确认每次都能 json.loads 成功。",
+      "quiz_topics": ["response_format", "json_object", "json.loads"]
+    },
+    {
+      "id": "4.3",
+      "title": "Anthropic 的 structured output",
+      "goal": "能用 messages.parse（或 output_config.format）拿到按 schema 校验后的结构化结果",
+      "diagram": "flowchart LR\n  A[\"定义 pydantic 类\"] --> B[\"messages.parse / output_format\"]\n  B --> C[\"SDK 按 schema 校验\"]\n  C --> D[\"parsed_output 直接取字段\"]",
+      "concepts": [
+        {"name": "定义 schema 而非祈祷", "detail": "用 pydantic 类或 JSON Schema 声明目标结构，接口直接按结构返回硬数据，不用手写 json.loads。"},
+        {"name": "messages.parse 更省事", "detail": "client.messages.parse(..., output_format=Cls) 校验后返回 response.parsed_output，直接拿对象。"},
+        {"name": "旧 output_format 已废", "detail": "别再用老 output_format 参数，新版是 output_config={format:{type:json_schema,...}} 或 messages.parse。"}
+      ],
+      "code": "from pydantic import BaseModel\n\nclass Sentiment(BaseModel):\n    label: str        # \"positive\" / \"negative\"\n    confidence: float\n\nresp = client.messages.parse(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\",\n               \"content\": \"判断情感：这电影太棒了\"}],\n    output_format=Sentiment,   # 按 schema 校验并解析\n)\nprint(resp.parsed_output.label)        # 直接是 Sentiment 实例字段\nprint(resp.parsed_output.confidence)",
+      "todo": "给「情感分析」定义你自己的 pydantic 类（可加一个 reason 字段），用 messages.parse 抽取并打印全部字段。",
+      "exercise": "分别用 OpenAI 的 json mode 和 Anthropic 的 messages.parse 抽同一组数据，对比哪边写的解析代码更少。",
+      "quiz_topics": ["messages.parse", "parsed_output", "output_config"]
+    },
+    {
+      "id": "4.4",
+      "title": "Prompt 缓存：双协议省钱之道",
+      "goal": "能说出缓存前缀命中原理，知道稳定内容放前、易变内容放后",
+      "diagram": "flowchart TD\n  A[\"请求前缀\"] --> B[\"稳定部分：system / 长文档\"]\n  A --> C[\"易变部分：每次不同的问题\"]\n  B -->|命中缓存| D[\"这一半按缓存价计\"]\n  C -->|全价| E[\"这一半按原价计\"]",
+      "animation": "cache",
+      "concepts": [
+        {"name": "前缀命中", "detail": "缓存按「从头对齐」匹配，开头那截稳定不变就能命中，命中部分按缓存价（便宜一大截）计。"},
+        {"name": "命中看 usage", "detail": "Anthropic 看 cache_read_input_tokens，OpenAI 兼容看 cached_tokens，用它判断缓存有没有生效。"},
+        {"name": "稳定的才配缓存", "detail": "时间戳、随机 ID 这类每次变，一旦放前面会让整个缓存失效；务必把易变内容挪到缓存断点之后。"}
+      ],
+      "code": "# Anthropic：给稳定的 system 打缓存标记\nresp = client.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    system=[{\"type\": \"text\",\n             \"text\": \"你是一份 3 万字产品文档的问答助手……\",\n             \"cache_control\": {\"type\": \"ephemeral\"}}],  # 前缀缓存\n    messages=[{\"role\": \"user\", \"content\": \"文档讲了哪些功能？\"}],\n)\nprint(\"缓存命中 token：\", resp.usage.cache_read_input_tokens)",
+      "todo": "",
+      "exercise": "把一段很长的 system 提示设置缓存后连发两次同样的问题，对比两次的 cache_read_input_tokens 变化。",
+      "quiz_topics": ["前缀缓存", "cache_read_input_tokens", "断点顺序"]
+    },
+    {
+      "id": "4.5",
+      "title": "Token 计数与成本核算",
+      "goal": "能估算一次调用的花费：输入×输入价 + 输出×输出价，并会用接口预计算 token 数",
+      "diagram": "flowchart LR\n  A[\"count_tokens 预估\"] --> B[\"输入 token × 输入单价\"]\n  B --> C[\"+\"]\n  D[\"输出 token × 输出单价\"] --> C\n  C --> E[\"本次成本\"]",
+      "concepts": [
+        {"name": "成本是一条公式", "detail": "花费≈输入 token×输入单价 + 输出 token×输出单价，两级单价不同，输出更贵。"},
+        {"name": "先计数再发", "detail": "用 count_tokens / messages.count_tokens 在发送前预估 token，避免盲发超预算。"},
+        {"name": "分级选模型", "detail": "简单任务用小模型（便宜）、复杂才上大模型，长上下文靠缓存回血，成本就这么省出来。"}
+      ],
+      "code": "# Anthropic：发送前预估输入 token\ncount = client.messages.count_tokens(\n    model=\"claude-opus-5\",\n    system=system,\n    messages=messages,\n)\n# 例：输入 1000 token × $5/1M = $0.005，输出另按 $25/1M 算\ncost = count.input_tokens / 1_000_000 * 5\nprint(f\"预计输入成本约 ${cost:.4f}\")",
+      "todo": "",
+      "exercise": "写一笔账：同一任务分别用大模型和小模型（各查一次单价），算出两者成本差，判断什么时候值得上大模型。",
+      "quiz_topics": ["成本公式", "count_tokens", "分级选模型"]
+    }
+  ]
+}

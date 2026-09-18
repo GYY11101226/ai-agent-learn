@@ -1,0 +1,68 @@
+{
+  "id": "module-0",
+  "title": "预备：LLM 接口心智模型",
+  "weeks": "第1周",
+  "prerequisites": "会 Python 基础、用过任意 LLM 聊天，懂一点 HTTP 请求/响应更佳",
+  "chapters": [
+    {
+      "id": "0.1",
+      "title": "把模型当「函数」调：LLM 接口是什么",
+      "goal": "能说清 LLM 接口的本质——一条 HTTP 请求换一次文本生成，并说出它和网页聊天框的区别",
+      "diagram": "flowchart LR\n  A[\"你的程序\"] -->|带 model 与 messages 的请求| B[\"LLM 接口\"]\n  B -->|一段生成的文本| A",
+      "concepts": [
+        {"name": "接口就是远程函数", "detail": "把模型封装成一个可编程的远程函数，传 model+messages，返回一段文本，后端可自由调用。"},
+        {"name": "与聊天框的区别", "detail": "网页聊天是把模型塞进界面手动用；接口是把模型接进你自己的程序，自动化、批量化、能上生产。"},
+        {"name": "协议才是本体", "detail": "各家模型接口形状大同小异，吃透「请求长什么样、响应长什么样」，换厂商只是换 key 和地址。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "打开任意一家模型平台的「API 文档」页，找出它的请求示例里「请求」和「响应」各是哪一段，圈出里面出现最多的两个字段。",
+      "quiz_topics": ["接口本质", "与聊天框区别", "协议"]
+    },
+    {
+      "id": "0.2",
+      "title": "最小请求：model + messages + 三个角色",
+      "goal": "能写出一个最小请求的结构骨架，并分清 system / user / assistant 三个角色各自管什么",
+      "diagram": "flowchart TD\n  A[\"请求\"] --> B[\"model：用哪个模型\"]\n  A --> C[\"messages：对话历史列表\"]\n  A --> D[\"参数：temperature / max_tokens 等\"]\n  C --> E[\"system 定规矩\"]\n  C --> F[\"user 提需求\"]\n  C --> G[\"assistant 是历史回答\"]",
+      "concepts": [
+        {"name": "三个必会字段", "detail": "model 选模型，messages 是角色对话列表，参数控制生成方式——这是所有 LLM 接口的共同骨架。"},
+        {"name": "system 定规矩", "detail": "一次性设定人设、边界、输出习惯，全程生效、不随每一句话重写，是「导演指令」。"},
+        {"name": "user 与 assistant", "detail": "user 是用户提的需求；assistant 是模型之前的回答——它也是历史的一部分，要如实回填。"}
+      ],
+      "code": "# 最小请求的结构骨架（伪代码，各家字段名略有出入）\nrequest = {\n    \"model\": \"claude-opus-5\",\n    \"messages\": [\n        {\"role\": \"system\", \"content\": \"你是简洁的技术讲师\"},\n        {\"role\": \"user\", \"content\": \"解释一下 token\"},\n        {\"role\": \"assistant\", \"content\": \"token 是……\"},  # 上一轮的回答\n    ],\n}",
+      "todo": "",
+      "exercise": "把「你好」这句话拆成一次最小请求：写出 model 该填什么、messages 里至少有哪两条，跟「有历史的多轮对话」的结构做对比。",
+      "quiz_topics": ["model", "messages", "三个角色"]
+    },
+    {
+      "id": "0.3",
+      "title": "两大协议：OpenAI 兼容 与 Anthropic Messages",
+      "goal": "能说出两大主流协议的名字、代表厂商，以及它们在请求结构上的核心差异",
+      "diagram": "flowchart TD\n  A[\"LLM 接口\"] --> B[\"OpenAI 兼容协议 /chat/completions\"]\n  A --> C[\"Anthropic Messages 协议 /v1/messages\"]\n  B --> D[\"DeepSeek / 方舟 / Ollama / vLLM\"]\n  C --> E[\"Claude\"]",
+      "concepts": [
+        {"name": "OpenAI 兼容是事实标准", "detail": "chat/completions 端点被国产与开源模型广泛兼容，学会它就能通吃 DeepSeek、方舟、Ollama、vLLM 等。"},
+        {"name": "Anthropic Messages", "detail": "/v1/messages 是 Claude 原生协议：system 是独立字段、content 是内容块列表，与前者形状不同。"},
+        {"name": "双协议靠开关切", "detail": "业务逻辑不变，用一个 LLM_PROVIDER 开关分派到不同底层，本仓库 src/agents.py 正是这么做的。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "把上述两家协议各列一条「请求里 messages 的样子」，找出它们最大的两处不同，用自己的话写下来。",
+      "quiz_topics": ["OpenAI 兼容", "Anthropic Messages", "双协议分发"]
+    },
+    {
+      "id": "0.4",
+      "title": "Token 与计价：输入输出分开算",
+      "goal": "能解释 token 是什么、为什么按 token 计费，以及输入与输出为何价格不同",
+      "diagram": "flowchart LR\n  A[\"一段文本\"] --> B[\"分词成 tokens\"]\n  B --> C[\"输入 token（便宜）\"]\n  B --> D[\"输出 token（贵数倍）\"]\n  C --> E[\"usage 字段记账\"]\n  D --> E",
+      "concepts": [
+        {"name": "token 是计费单位", "detail": "模型读写文本按 token 计量，大约 0.75 个英文单词或半个汉字算一个 token。"},
+        {"name": "输入输出分开计价", "detail": "输入 token 便宜、输出 token 贵数倍——因为输出要逐字生成、算力更重，所以「读」比「写」省钱。"},
+        {"name": "usage 记账", "detail": "每次响应都带 usage（prompt_tokens / completion_tokens），据此算钱、控成本、做预算。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "查一家厂商的定价页（如 DeepSeek 或 Anthropic），找出它输入/输出各多少钱每百万 token，算一笔「输入 1000、输出 500 token」的账。",
+      "quiz_topics": ["token", "输入输出计价", "usage"]
+    }
+  ]
+}

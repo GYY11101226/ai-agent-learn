@@ -1,0 +1,70 @@
+{
+  "id": "module-3",
+  "title": "工具调用 Function Calling",
+  "weeks": "第4周",
+  "prerequisites": "完成 module-2，理解 messages 全量历史与收尾字段",
+  "chapters": [
+    {
+      "id": "3.1",
+      "title": "心智模型：模型「申请调用」而非直接执行",
+      "goal": "能说清工具调用的本质——模型只输出「调什么+参数」，真正执行与回填由你完成",
+      "diagram": "flowchart LR\n  A[\"你定义工具列表\"] --> B[\"模型输出 tool_call(名字+参数)\"]\n  B --> C[\"你来执行真正的函数\"]\n  C --> D[\"结果回填进 messages\"]\n  D --> B",
+      "animation": "tool-roundtrip",
+      "concepts": [
+        {"name": "模型不执行任何东西", "detail": "它只生成「调用哪个工具、参数是什么」的 JSON，到底跑不跑、怎么跑，决定权在你手里。"},
+        {"name": "安全边界由此而来", "detail": "模型申请、你白名单校验后才真正调用，天然就是一道权限闸，危险操作可拦截。"},
+        {"name": "必须回填闭环", "detail": "执行结果必须作为一条工具消息传回，模型才能基于结果继续，否则它的工具调用等于白喊。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "用一句话向别人解释：「模型调工具」这句话为什么其实不准确，真正执行工具的是谁？",
+      "quiz_topics": ["申请 vs 执行", "安全边界", "回填闭环"]
+    },
+    {
+      "id": "3.2",
+      "title": "定义 tools schema 与强制调用",
+      "goal": "能用 JSON Schema 定义工具入参，明白 description 的作用，并会用 tool_choice 强制必调",
+      "diagram": "flowchart TD\n  A[\"tools 定义\"] --> B[\"name + description：干什么、何时用\"]\n  A --> C[\"input_schema / parameters：入参契约\"]\n  C --> D[\"tool_choice 决定必调还是自选\"]",
+      "concepts": [
+        {"name": "schema 就是契约", "detail": "name+description 讲清用途，parameters（或 input_schema）用 JSON Schema 声明入参类型与必填项。"},
+        {"name": "description 决定命中率", "detail": "模型靠描述判断什么时候该用哪个工具——写具体、写使用时机，别写空话。"},
+        {"name": "tool_choice 可选强制", "detail": "指定某工具名则必调；不设则模型自己判断要不要调。抽结构化数据时常用强制调用拿稳妥。"}
+      ],
+      "code": "# OpenAI 兼容：function 型\nopenai_tools = [{\n    \"type\": \"function\",\n    \"function\": {\n        \"name\": \"get_weather\",\n        \"description\": \"查询某城市当前天气，需要城市名\",\n        \"parameters\": {\n            \"type\": \"object\",\n            \"properties\": {\"city\": {\"type\": \"string\"}},\n            \"required\": [\"city\"],\n        },\n    },\n}]\n\n# Anthropic：input_schema 型（字段名不同，语义一致）\nanthropic_tools = [{\n    \"name\": \"get_weather\",\n    \"description\": \"查询某城市当前天气，需要城市名\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\"city\": {\"type\": \"string\"}},\n        \"required\": [\"city\"],\n    },\n}]",
+      "todo": "",
+      "exercise": "给你熟悉的「查快递」场景写一个工具定义，重点写好 description（说清何时该用），再用 tool_choice 强制模型调用一次。",
+      "quiz_topics": ["tools schema", "description", "tool_choice"]
+    },
+    {
+      "id": "3.3",
+      "title": "手写 agentic loop：调用 → 回填 → 再问",
+      "goal": "能写出一个最小 agentic loop：只要收尾是要调工具，就执行、回填、再请求，直到结束",
+      "diagram": "flowchart TD\n  A[\"发请求\"] --> B{\"要不要调工具?\"}\n  B -->|是| C[\"执行工具\"]\n  C --> D[\"结果回填\"]\n  D --> A\n  B -->|否| E[\"输出最终回答 结束\"]",
+      "animation": "agentic-loop",
+      "concepts": [
+        {"name": "循环骨架 while", "detail": "请求→看收尾，是要调工具就执行并回填、再请求；否则跳出输出最终答案。"},
+        {"name": "回填协议要对齐", "detail": "两家的工具回填消息形状不同：OpenAI 用 role:tool 消息，Anthropic 用 tool_result 块，别混用。"},
+        {"name": "这就是 Agent 雏形", "detail": "循环 + 工具 + 模型就是 agent 的基础，本仓库 Tutor/Grader 的「强制工具调用」正是此模式。"}
+      ],
+      "code": "messages = [{\"role\": \"user\", \"content\": \"北京今天天气如何？\"}]\n\nwhile True:\n    resp = client.chat.completions.create(\n        model=\"deepseek-v4-pro\",\n        tools=tools,\n        messages=messages,\n    )\n    msg = resp.choices[0].message\n    messages.append(msg.model_dump())\n\n    if not msg.tool_calls:          # 不再要调工具，输出答案\n        print(msg.content)\n        break\n\n    for call in msg.tool_calls:     # 逐个执行真正的函数\n        result = {\"city\": \"北京\", \"temp\": \"26°C\"}   # 假数据，实战换成真实调用\n        messages.append({\n            \"role\": \"tool\",\n            \"tool_call_id\": call.id,\n            \"content\": str(result),\n        })",
+      "todo": "补全循环里的「执行工具」这步：用一个真实的 get_weather 函数替换示例里的假数据，并处理 city 参数缺失的情况。",
+      "exercise": "把上面循环跑通，观察它一共往返了几次、每次模型要调什么工具，最后答案用到了哪次工具结果。",
+      "quiz_topics": ["agentic loop", "tool 回填", "收尾判断"]
+    },
+    {
+      "id": "3.4",
+      "title": "并行工具调用与错误回传",
+      "goal": "能处理一次回复里的多个工具调用，以及工具失败时如何把错误如实传回模型",
+      "diagram": "flowchart TD\n  A[\"一次回复含多个 tool_use\"] --> B[\"各自并发执行\"]\n  B --> C[\"结果一并回填同一条消息\"]\n  B --> D[\"失败的用 is_error 标记传回\"]\n  D --> E[\"模型看到错误自行纠正\"]",
+      "concepts": [
+        {"name": "并行多个调用", "detail": "一次回复可能同时要几个工具，彼此独立可并发执行，串行等会白白加延迟。"},
+        {"name": "结果一并回填", "detail": "把所有结果装进同一条回填消息再发，拆开回填会让模型慢慢养成不并行的坏习惯。"},
+        {"name": "失败也如实回填", "detail": "工具报错用 is_error 标记传回，让模型看到错误自己纠正，而不是静默吞掉装没事。"}
+      ],
+      "code": "# Anthropic 版：tool_result 里用 is_error 标记失败\nfor block in resp.content:\n    if block.type == \"tool_use\":\n        try:\n            result = run_tool(block.name, block.input)\n            content = [{\"type\": \"tool_result\", \"tool_use_id\": block.id,\n                        \"content\": str(result)}]\n        except Exception as e:\n            content = [{\"type\": \"tool_result\", \"tool_use_id\": block.id,\n                        \"content\": f\"调用失败: {e}\", \"is_error\": True}]\n        messages.append({\"role\": \"user\", \"content\": content})",
+      "todo": "故意让一个工具抛异常，观察用 is_error=True 回填后，模型第二轮能不能自己换参数或换策略纠正。",
+      "exercise": "写两个互不依赖的工具（查天气、查机票），构造一个能触发并行调用的问题，确认模型一次吐出两个 tool_use。",
+      "quiz_topics": ["并行 tool_use", "一并回填", "is_error"]
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "id": "module-1",
+  "title": "第一个调用与基础参数",
+  "weeks": "第2周",
+  "prerequisites": "完成 module-0，装了 Python 3.10+，有任意一家模型的 API Key",
+  "chapters": [
+    {
+      "id": "1.1",
+      "title": "拿钥匙与装 SDK：API Key / base_url / 依赖",
+      "goal": "能装好 SDK、用环境变量管理 API Key，并理解 base_url 指向哪个端点",
+      "diagram": "flowchart LR\n  A[\"控制台申请 API Key\"] --> B[\"写进 .env\"]\n  B --> C[\"SDK 读环境变量\"]\n  C --> D[\"base_url 指向协议端点\"]\n  D --> E[\"发请求\"]",
+      "concepts": [
+        {"name": "API Key 只认 key 不认人", "detail": "调用凭证，谁拿 key 谁就能用你的额度，所以写进 .env / 环境变量，绝不硬编码进代码。"},
+        {"name": "base_url 是协议端点", "detail": "OpenAI 兼容各家端点不同（DeepSeek、方舟各有自己的地址），SDK 会在它后面拼 /chat/completions。"},
+        {"name": "优先用官方 SDK", "detail": "openai / anthropic 官方 SDK 替你处理重试、超时、流式解析，比手写 HTTP 省心得多。"}
+      ],
+      "code": "# 安装两个协议的 SDK\npip install openai anthropic\n\n# .env 里填凭证（以 DeepSeek 为例）\nOPENAI_API_KEY=sk-...\nOPENAI_BASE_URL=https://api.deepseek.com\nOPENAI_MODEL=deepseek-v4-pro",
+      "todo": "",
+      "exercise": "在你的环境里建好 .env，把 key 填进去，再用 python 的 os.getenv('OPENAI_API_KEY') 读出来确认变量名拼对。",
+      "quiz_topics": ["API Key", "base_url", "SDK"]
+    },
+    {
+      "id": "1.2",
+      "title": "第一个请求：OpenAI 兼容版",
+      "goal": "能用 openai SDK 打出一个真实请求，正确解析出 choices[0].message.content 和 usage",
+      "diagram": "flowchart LR\n  A[\"OpenAI(base_url=...)\"] --> B[\"chat.completions.create\"]\n  B --> C[\"choices[0].message.content\"]\n  B --> D[\"usage.total_tokens\"]",
+      "concepts": [
+        {"name": "client 构造", "detail": "base_url 指向 OpenAI 兼容端点（如 DeepSeek），SDK 自动在尾部拼 /chat/completions，你只传业务字段。"},
+        {"name": "一次往返", "detail": "create 传 model+messages，响应里 choices 列表取第一条 message.content；usage 顺带记录消耗。"},
+        {"name": "模型名随供应商", "detail": "model 用哪家就填哪家的名字（DeepSeek 用 deepseek-v4-pro 之类），换供应商时只改 model 和 base_url。"}
+      ],
+      "code": "from openai import OpenAI\n\nclient = OpenAI(\n    api_key=\"sk-...\",            # 建议改从环境变量读\n    base_url=\"https://api.deepseek.com\",\n)\n\nresp = client.chat.completions.create(\n    model=\"deepseek-v4-pro\",\n    messages=[{\"role\": \"user\", \"content\": \"用一句话解释什么是 token\"}],\n)\nprint(resp.choices[0].message.content)   # 生成的回答\nprint(\"消耗 token：\", resp.usage.total_tokens)",
+      "todo": "亲手跑通你自己的第一个请求：把上面的 base_url 与 model 换成你的供应商和模型，打印 content 与 usage。",
+      "exercise": "把同一句话分别发给 model 不同的小模型与大模型，对比回答质量与 usage.total_tokens 的差异。",
+      "quiz_topics": ["第一个请求", "choices", "usage"]
+    },
+    {
+      "id": "1.3",
+      "title": "系统提示 system 与角色分工",
+      "goal": "能用 system 固定助手人设与规则，理解三个角色在对话历史里的不同用法",
+      "diagram": "flowchart LR\n  A[\"system 定规矩\"] --> D[\"全程生效的背景\"]\n  B[\"user 提需求\"] --> D\n  C[\"assistant 回答（作历史）\"] --> D\n  D --> E[\"拼成一个 messages 列表\"]",
+      "concepts": [
+        {"name": "system 是导演指令", "detail": "一次设好人设/边界/输出格式，后续每轮都会带上它，不必重复啰嗦。"},
+        {"name": "assistant 是历史", "detail": "把模型上一轮的回复原样塞回 messages，它才知道自己之前说过什么、上下文在哪。"},
+        {"name": "越靠后越「近」", "detail": "messages 的顺序影响权重，重要全局约束放 system，临时纠正放最近的 user 那一句。"}
+      ],
+      "code": "messages = [\n    {\"role\": \"system\", \"content\": \"你是简洁的中文技术讲师，回答不超过 50 字。\"},\n    {\"role\": \"user\", \"content\": \"什么是 token？\"},\n    {\"role\": \"assistant\", \"content\": \"token 是模型读写文本的最小计量单位。\"},\n    {\"role\": \"user\", \"content\": \"那它和字有什么区别？\"},\n]\n# 上面 history 原样传回，模型就能接着上一轮上下文回答",
+      "todo": "",
+      "exercise": "写一个带 system 人设的请求，分别用「有 system」和「没有 system」各问一次同样的问题，对比语气和长度差异。",
+      "quiz_topics": ["system", "assistant 历史", "角色顺序"]
+    },
+    {
+      "id": "1.4",
+      "title": "核心采样参数：temperature / max_tokens / top_p",
+      "goal": "能说清 temperature 与 max_tokens 的实际效果，并知道何时调、调多少",
+      "diagram": "flowchart TD\n  A[\"temperature\"] --> B[\"高=发散有创意 / 低=确定保守\"]\n  C[\"max_tokens\"] --> D[\"单次回复的硬上限，超了截断\"]\n  E[\"top_p\"] --> F[\"候选词的采样范围\"]",
+      "concepts": [
+        {"name": "temperature 调随机性", "detail": "0~2 之间：越高越发散有创意，越低越确定保守；写代码、抽取信息用低值，头脑风暴用高值。"},
+        {"name": "max_tokens 是硬上限", "detail": "超过就截断，OpenAI 兼容可省略、Anthropic 必填；生成类给足，分类/抽取给小值省钱。"},
+        {"name": "两协议参数有差异", "detail": "同名参数（temperature）语义接近；「思考/推理深度」各家各不相同，Claude 用 thinking 与 effort。"}
+      ],
+      "code": "resp = client.chat.completions.create(\n    model=\"deepseek-v4-pro\",\n    messages=[{\"role\": \"user\", \"content\": \"给产品起 10 个名字\"}],\n    temperature=1.2,     # 高：更有创意\n    max_tokens=200,      # 上限，防失控\n    top_p=0.9,\n)",
+      "todo": "",
+      "exercise": "同一个问题分别用 temperature=0.2 和 1.5 各跑一次，观察回答的稳定性与发散度，说说你会在哪些场景选低值。",
+      "quiz_topics": ["temperature", "max_tokens", "top_p"]
+    },
+    {
+      "id": "1.5",
+      "title": "多轮对话：无状态接口靠全量历史续聊",
+      "goal": "能自己维护 messages 列表，每轮追加 user/assistant 后再发，实现「记得」上下文",
+      "diagram": "flowchart TD\n  A[\"请求(全量历史)\"] --> B[\"响应(新 assistant 回答)\"]\n  B --> C[\"追加回 messages\"]\n  C --> A",
+      "concepts": [
+        {"name": "接口无状态", "detail": "服务端不替你记上下文，每一轮都必须把整段历史重新传过去，它才会「记得」。"},
+        {"name": "追加而非覆盖", "detail": "新回答作为 assistant 追加，下一轮全量带上；少一条历史，上下文就断一截。"},
+        {"name": "历史的代价", "detail": "历史越长 token 越贵、越容易顾头不顾尾；无关的老内容该裁剪就裁剪。"}
+      ],
+      "code": "messages = [{\"role\": \"system\", \"content\": \"你是助手。\"}]\n\nwhile True:\n    user_input = input(\"你：\")\n    if user_input in {\"q\", \"quit\"}:\n        break\n    messages.append({\"role\": \"user\", \"content\": user_input})\n\n    resp = client.chat.completions.create(\n        model=\"deepseek-v4-pro\",\n        messages=messages,          # 每次带上全量历史\n    )\n    answer = resp.choices[0].message.content\n    messages.append({\"role\": \"assistant\", \"content\": answer})  # 追加，供下轮使用\n    print(\"助手：\", answer)",
+      "todo": "",
+      "exercise": "跑一个「先告诉我你名字，再问它我叫什么」的两轮对话，验证第二轮的模型是否记得第一轮你告诉它的名字。",
+      "quiz_topics": ["无状态", "全量历史", "追加"]
+    }
+  ]
+}
