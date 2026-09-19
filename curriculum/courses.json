@@ -46,5 +46,11 @@
     "title": "大语言模型 从入门到精通",
     "description": "从请求响应与 token 到流式、工具调用、结构化输出与生产化，边做边学 LLM 接口调用（OpenAI 兼容 + Anthropic 双协议）",
     "dir": "llm"
+  },
+  {
+    "id": "agent-architecture",
+    "title": "Agent 架构 从入门到精通",
+    "description": "从单一循环的解剖到规划/决策/行动/工具调用各环节的架构设计，再到多智能体编排与选型，边做边学 Agent 内部的运行机制",
+    "dir": "agent-architecture"
   }
 ]

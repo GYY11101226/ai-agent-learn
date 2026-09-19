@@ -1,0 +1,84 @@
+{
+  "id": "module-3",
+  "title": "决策与工具调用架构",
+  "weeks": "第6-7周",
+  "prerequisites": "模块2 规划架构",
+  "chapters": [
+    {
+      "id": "3.1",
+      "title": "工具即接口：schema 的架构含义",
+      "goal": "把工具理解为 Agent 架构里的「函数接口」，会设计 name/description/parameters 三要素",
+      "diagram": "flowchart LR\n  A[工具 schema] --> B[\"模型读说明书理解\"]\n  B --> C[\"生成合法的调用参数\"]\n  C --> D[\"代码执行\"]",
+      "concepts": [
+        {"name": "工具是架构的可插拔接口", "detail": "schema 是工具对模型的「说明书」，模型靠它决定何时用、怎么用——接口设计就是架构设计。"},
+        {"name": "description 决定「何时被选中」", "detail": "写清适用场景、参数含义、返回什么；写得含糊，模型就会在错误场景选错工具。"},
+        {"name": "input_schema 是参数契约", "detail": "类型、枚举、必填、strict，是模型生成合法调用的约束——契约越清晰，执行越可靠。"}
+      ],
+      "code": "tools = [{\n    'name': 'get_weather',\n    'description': '查询指定城市的当前天气。返回温度、天气状况与降水概率。',\n    'input_schema': {'type': 'object',\n        'properties': {'location': {'type': 'string', 'description': '城市名'},\n            'unit': {'type': 'string', 'enum': ['celsius', 'fahrenheit']}},\n        'required': ['location']}}]",
+      "todo": "",
+      "exercise": "设计 search_web(query, max_results) 的完整 schema，重点写好 description。",
+      "quiz_topics": ["工具即接口", "description 要点", "input_schema 契约"]
+    },
+    {
+      "id": "3.2",
+      "title": "工具调用协议：tool_use / tool_result 往返",
+      "goal": "吃透工具调用的一次往返机制：模型输出 tool_use、代码执行、tool_result 回填——协议是循环的血液",
+      "diagram": "flowchart LR\n  A[\"下行 tool_use: id/name/input\"] --> B[执行工具]\n  B --> C[\"上行 tool_result: 带 tool_use_id\"]\n  C --> A",
+      "animation": "tool-roundtrip",
+      "concepts": [
+        {"name": "下行 tool_use", "detail": "模型输出一个结构化块，含 id、name、input，这是「调用意图」——注意它只是意图，不是执行。"},
+        {"name": "上行 tool_result", "detail": "执行结果必须带对应 tool_use_id 回填消息列表，模型才认账——id 对不上等于白回填。"},
+        {"name": "协议稳定是承重墙", "detail": "往返格式稳定，循环才能多轮不散架；协议一旦忽左忽右，Agent 就会半途失明。"}
+      ],
+      "code": "resp = client.messages.create(model=MODEL, tools=tools, messages=messages)\n# 下行：模型输出 tool_use 块\nfor block in resp.content:\n    if block.type == 'tool_use':\n        # 上行：结果带 tool_use_id 回填\n        messages.append({'role': 'user', 'content': [{\n            'type': 'tool_result',\n            'tool_use_id': block.id,\n            'content': execute_tool(block.name, block.input),\n        }]})",
+      "todo": "",
+      "exercise": "画出一次工具往返的完整时序，标出下行和上行各携带哪些字段。",
+      "quiz_topics": ["tool_use 块", "tool_result 回填", "协议稳定性"]
+    },
+    {
+      "id": "3.3",
+      "title": "工具路由：单工具 / 多工具 / 动态注册",
+      "goal": "理解「决策」如何落到「用哪个工具」：单工具直调、多工具候选、动态注册工具集三种架构",
+      "diagram": "flowchart TD\n  A[\"决策：用哪个工具\"] --> B[\"单工具直调\"]\n  A --> C[\"少量工具：模型自己选\"]\n  A --> D[\"大量工具：先分类路由再选\"]\n  A --> E[\"按需动态注册工具集\"]",
+      "concepts": [
+        {"name": "少量工具 = 模型自己选", "detail": "把若干工具全放进 tools 参数，模型读完 schema 自己挑——工具少时最简单有效。"},
+        {"name": "大量工具 = 先路由再选", "detail": "工具几十上百个时，先按意图归到某类，再在类内选，避免模型挑花眼、选错。"},
+        {"name": "动态注册", "detail": "每轮按需挂哪些工具，而不是一成不变——省上下文、降低误选率，是规模化的关键。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "给你项目的 20 个工具设计一个「分类路由」方案，说明每类各放哪些。",
+      "quiz_topics": ["工具选择机制", "分类路由", "动态注册"]
+    },
+    {
+      "id": "3.4",
+      "title": "停止条件：什么时候算「做完了」",
+      "goal": "理解停止判定是决策里最易被忽略的架构点：显式判据 + 上限兜底",
+      "diagram": "flowchart TD\n  A[\"每轮结束\"] --> B{达成完成判据?}\n  B -->|是| C[结束]\n  B -->|否| D{超过轮数上限?}\n  D -->|是| E[\"强制结束并报告\"]\n  D -->|否| F[继续下一轮]",
+      "concepts": [
+        {"name": "两类停止", "detail": "模型自己判定完成（end_turn）和系统强判（达到完成判据或超过轮数上限）——后者是护栏。"},
+        {"name": "完成判据要显式", "detail": "让模型用「完成检查」输出 done/not_done，而不是靠感觉——感觉是不可靠的。"},
+        {"name": "上限兜底", "detail": "max_rounds 防止模型在「差一点」时无限循环烧钱，是成本与安全的双重保险。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "为「查资料写摘要」设计一个显式的完成判据，并定一个合理的轮数上限。",
+      "quiz_topics": ["两类停止", "显式完成判据", "上限兜底"]
+    },
+    {
+      "id": "3.5",
+      "title": "工具失败与恢复：is_error、重试、降级、熔断",
+      "goal": "掌握工具失败的恢复架构：is_error 回传、自动重试、结果降级、熔断止损四层",
+      "diagram": "flowchart TD\n  A[工具失败] --> B[\"is_error 回传给模型\"]\n  B --> C{模型修正重试}\n  C -->|瞬时错误| D[自动重试]\n  C -->|真不可行| E[降级结果]\n  D --> F{连续失败到阈值?}\n  F -->|是| G[熔断止损]",
+      "concepts": [
+        {"name": "is_error 回传", "detail": "失败不直接 throw 给模型，而是把错误信息当 tool_result 喂回，让模型自己修正——模型比代码更会临场应变的误差解释。"},
+        {"name": "重试与降级", "detail": "网络类瞬时错误可自动重试；实在不行给一个降级结果（如「查不到就用缓存」）而不是硬崩。"},
+        {"name": "熔断", "detail": "连续失败到阈值就暂停该工具或整体止损，避免错误在循环里滚雪球、烧光预算。"}
+      ],
+      "code": "result = {'type': 'tool_result', 'tool_use_id': block.id,\n    'content': '未找到该城市，请提供有效城市名', 'is_error': True}",
+      "todo": "",
+      "exercise": "设计一套「重试 2 次 → 降级 → 熔断」的工具恢复策略并用伪代码写出来。",
+      "quiz_topics": ["is_error", "重试与降级", "熔断"]
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "id": "module-1",
+  "title": "Agent 循环解剖：感知·规划·决策·行动·观察",
+  "weeks": "第2-3周",
+  "prerequisites": "预备：Agent 架构心智模型",
+  "chapters": [
+    {
+      "id": "1.1",
+      "title": "感知 Perceive：把任务与环境装配成上下文",
+      "goal": "理解感知环节做什么：把用户输入、系统状态、历史记忆装配成模型可用的上下文，且知道它有 token 成本",
+      "diagram": "flowchart LR\n  A[用户消息] --> D[\"上下文装配：筛选+压缩\"]\n  B[环境状态] --> D\n  C[历史记忆] --> D\n  D --> E[模型]",
+      "concepts": [
+        {"name": "感知的三个输入源", "detail": "用户消息（想要什么）、环境状态（文件/数据/时间等实时信息）、历史记忆（之前聊过什么）。"},
+        {"name": "上下文装配是「筛选+压缩」", "detail": "不是把所有东西一股脑塞进去，而是挑相关信息、控制 token 预算——塞得越多越贵越可能跑偏。"},
+        {"name": "感知质量决定天花板", "detail": "模型看不到的信息，再强的规划也白搭——garbage in, garbage out。"}
+      ],
+      "code": "def assemble_context(task, environment, history):\n    # 只保留与当前任务相关的片段，其余压缩或丢弃\n    relevant = retrieve(environment, query=task)\n    return {\n        'system': '你是执行任务的 Agent',\n        'user': task,\n        'context': relevant,\n        'history': history[-N:],  # 只带最近 N 轮，控制 token\n    }",
+      "todo": "",
+      "exercise": "列出你在一个「查天气」任务里，感知环节需要装配的三种输入分别是什么。",
+      "quiz_topics": ["感知三输入源", "上下文装配原则"]
+    },
+    {
+      "id": "1.2",
+      "title": "规划 Plan：任务拆解与计划生成",
+      "goal": "理解规划环节：把大任务拆成有序、可验证的中间步骤，知道好计划长什么样",
+      "diagram": "flowchart TD\n  A[大任务] --> B[\"拆成子任务队列\"]\n  B --> C[子任务1]\n  B --> D[子任务2]\n  B --> E[子任务3]\n  C --> F[\"每步可验证\"]\n  D --> F\n  E --> F",
+      "concepts": [
+        {"name": "为什么规划", "detail": "大任务一步做不完，拆成可管理、可验证的步骤，失败时也好定位是哪一步错了。"},
+        {"name": "好计划的三个特征", "detail": "有序（有先后依赖）、可验证（每步能判断成没成）、可修正（错了能重排）。"},
+        {"name": "粒度权衡", "detail": "太粗没指导意义，太细浪费 token 且易僵化——先粗后细，边执行边细化。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "把「帮我做一份周报」拆成一份有序、可验证、可修正的计划。",
+      "quiz_topics": ["规划目的", "好计划三特征", "粒度权衡"]
+    },
+    {
+      "id": "1.3",
+      "title": "决策 Decide：选工具与判定停止",
+      "goal": "理解决策环节是架构的心脏：每一步选哪个工具/动作、传什么参数、什么时候该停",
+      "diagram": "flowchart TD\n  A[\"当前上下文状态\"] --> B{决策：下一步干什么}\n  B -->|调工具A| C[传参执行]\n  B -->|调工具B| D[传参执行]\n  B -->|无需工具| E[直接回文本]\n  B -->|目标已达成| F[结束]",
+      "concepts": [
+        {"name": "决策其实是「下一步干什么」", "detail": "把推理结果映射到一个具体动作：调某工具、回文本、还是结束——这是整个循环的驱动点。"},
+        {"name": "决策依据 = 当前上下文", "detail": "模型读到的状态决定决策质量，所以决策质量的上限由感知质量决定。"},
+        {"name": "停止判定是最关键的决策", "detail": "过早停没做完，过晚停陷入死循环——需要显式的完成判据（模块3.4细讲）。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "写出一个 Agent 在「查天气并决定要不要带伞」任务里，可能做出的三种不同决策。",
+      "quiz_topics": ["决策本质", "决策依据", "停止判定"]
+    },
+    {
+      "id": "1.4",
+      "title": "行动 Act：执行与副作用",
+      "goal": "理解行动环节真正「动手」：解析参数→调用→拿到结果，以及为什么副作用的治理是架构问题",
+      "diagram": "flowchart LR\n  A[\"tool_use 意图块\"] --> B[\"解析参数 json.loads\"]\n  B --> C[调用工具函数]\n  C --> D[\"结果包装成 tool_result\"]",
+      "concepts": [
+        {"name": "行动 = 意图落地", "detail": "模型只给「意图」（调什么、传什么参数），真正执行的是你的代码——intent 与 execution 是分离的。"},
+        {"name": "执行三步", "detail": "安全地解析参数（json.loads）→ 调用工具函数 → 把结果包装成 tool_result 回填。"},
+        {"name": "副作用是架构重灾区", "detail": "写文件、删数据、发请求都不可逆，必须在执行前设好边界（模块4.1细讲），否则一次误操作就真碰坏了数据。"}
+      ],
+      "code": "import json\n\ndef execute_tool(name, raw_input):\n    try:\n        args = json.loads(raw_input)  # 解析安全，不用字符串匹配\n    except json.JSONDecodeError:\n        return {'tool_use_id': None, 'content': '参数不是合法 JSON', 'is_error': True}\n    fn = TOOL_REGISTRY.get(name)\n    if fn is None:\n        return {'tool_use_id': None, 'content': f'工具 {name} 不存在', 'is_error': True}\n    return fn(**args)",
+      "todo": "给 execute_tool 补上 try/except，让工具自身抛异常时也返回 is_error=True 而不是让循环崩掉。",
+      "exercise": "写一个 execute_tool 的骨架，处理「工具不存在」和「参数解析失败」两种情况。",
+      "quiz_topics": ["意图落地", "执行三步", "副作用治理"]
+    },
+    {
+      "id": "1.5",
+      "title": "观察 Observe 与闭环：结果回填与收敛",
+      "goal": "理解观察环节为什么不能省：把执行结果回填模型、让模型判断是否达成，是整个循环收敛的关键",
+      "diagram": "flowchart LR\n  A[tool_result] --> B[\"带 tool_use_id 回填\"]\n  B --> C[\"模型消化结果\"]\n  C --> D{达成?}\n  D -->|否| E[再决策]\n  D -->|是| F[\"结束 end_turn\"]",
+      "animation": "agentic-loop",
+      "concepts": [
+        {"name": "观察 = 把结果喂回大脑", "detail": "tool_result 必须带对的 tool_use_id 回填消息列表，否则模型不知道工具到底跑了什么。"},
+        {"name": "收敛 = 观察后判断", "detail": "模型根据观察结果决定「继续下一轮」还是「结束」，这是收敛的本质——观察缺失就永远不会收敛。"},
+        {"name": "观察缺失的症状", "detail": "Agent 像失忆一样反复做同一件事，或根本没意识到任务其实已经完成了。"}
+      ],
+      "code": "",
+      "todo": "给 run_agent 加日志，打印每一轮模型做了哪个决策、观察到了什么、为什么选择继续/停止。",
+      "exercise": "解释：为什么 tool_result 丢了 tool_use_id 会让循环「失明」？",
+      "quiz_topics": ["结果回填", "收敛判断", "观察缺失症状"]
+    }
+  ]
+}

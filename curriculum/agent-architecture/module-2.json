@@ -1,0 +1,68 @@
+{
+  "id": "module-2",
+  "title": "规划架构：先想清楚再动手",
+  "weeks": "第4-5周",
+  "prerequisites": "模块1 循环解剖",
+  "chapters": [
+    {
+      "id": "2.1",
+      "title": "ReAct：推理与行动交错",
+      "goal": "掌握 ReAct 范式：思考→行动→观察三块循环，能写出它的消息结构",
+      "diagram": "flowchart LR\n  A[Thought 思考] --> B[Action 行动]\n  B --> C[Observation 观察]\n  C --> A",
+      "concepts": [
+        {"name": "ReAct = 边想边做", "detail": "每一步先写「思考」、再调用工具、再记录「观察」，三者交替直到完成——是最通用的范式。"},
+        {"name": "优势与代价", "detail": "可解释、渐进收敛、几乎不依赖事先规划；但思考与行动耦合，交互轮次多、token 消耗高。"},
+        {"name": "它是一种「隐式规划」", "detail": "没有显式计划，靠每一步的思考逐步逼近目标——和模块2.2的显式规划形成对照。"}
+      ],
+      "code": "messages = [{'role': 'user', 'content': task}]\nwhile True:\n    resp = client.messages.create(model=MODEL, tools=tools, messages=messages)\n    if resp.stop_reason == 'end_turn':\n        break\n    # Action：执行工具，Observation：结果回填\n    messages += [{'role': 'assistant', 'content': resp.content}]\n    messages += [{'role': 'user', 'content': [\n        {'type': 'tool_result', 'tool_use_id': b.id, 'content': run(b)} for b in resp.content if b.type == 'tool_use']}]",
+      "todo": "",
+      "exercise": "把「查两地天气并比较温度」写成 ReAct 的一组 Thought/Action/Observation 序列。",
+      "quiz_topics": ["ReAct 三块", "优缺点", "隐式规划"]
+    },
+    {
+      "id": "2.2",
+      "title": "Plan-and-Execute：先规划后执行",
+      "goal": "掌握 Plan-and-Execute：先产出完整计划再逐步执行，理解它与 ReAct 的架构差异",
+      "diagram": "flowchart TD\n  A[Planner 规划器] --> B[\"产出计划清单\"]\n  B --> C[Executor 逐步执行]\n  C --> D{看计划有偏差?}\n  D -->|是| A\n  D -->|否| E[完成]",
+      "concepts": [
+        {"name": "两步走", "detail": "规划器（Planner）先出具计划清单，执行器（Executor）按序逐条完成——职责被拆成两块。"},
+        {"name": "优势与代价", "detail": "全局视野好、步骤可控、可独立重试单步；但计划一旦错就全错、对突发变化不够灵活。"},
+        {"name": "关键在「计划再审视」", "detail": "执行中可以回头看计划，发现偏差时允许重新规划（re-plan），而不是一条道走到黑。"}
+      ],
+      "code": "",
+      "todo": "把一个 ReAct 思路改造成 Plan-and-Execute：先让模型输出 JSON 计划列表，再逐条执行。",
+      "exercise": "为「搭建一个博客项目」产出一份 Plan-and-Execute 的计划清单。",
+      "quiz_topics": ["规划器与执行器分离", "与 ReAct 差异", "re-plan"]
+    },
+    {
+      "id": "2.3",
+      "title": "ReWOO：把推理与工具执行解耦",
+      "goal": "理解 ReWOO 省 token 的机制：用显式计划 + 变量占位，让推理不再等待每一步工具结果",
+      "diagram": "flowchart LR\n  A[\"计划含 #E1 #E2 占位\"] --> B[\"批量执行所有工具\"]\n  B --> C[\"代入占位求解\"]\n  C --> D[汇总答案]",
+      "concepts": [
+        {"name": "ReWOO = 规划前置 + 变量引用", "detail": "规划时用 #E1、#E2 标记每个工具的输出，之后统一代入求解，避免每步都暂停等工具结果。"},
+        {"name": "核心收益是省 token", "detail": "推理和工具调用不再交错，少了大量中间「思考」往返，长链条任务显著省钱。"},
+        {"name": "代价", "detail": "计划必须足够精确，变量引用一旦错位会导致整体失败——适合工具调用高度可预测的任务。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "把 2.2 的博客计划改写成 ReWOO 风格：用 #E1/#E2 占位表示中间结果。",
+      "quiz_topics": ["ReWOO 机制", "变量引用", "省 token 原理"]
+    },
+    {
+      "id": "2.4",
+      "title": "搜索式规划：树与图",
+      "goal": "理解 ToT（树）与图式规划如何用「多分支探索 + 剪枝」超越线性计划，知道何时才值得用",
+      "diagram": "flowchart TD\n  A[根] --> B[分支1]\n  A --> C[分支2]\n  A --> D[分支3]\n  B --> E[\"评估保留\"]\n  C --> F[\"剪掉\"]\n  D --> G[\"评估保留\"]",
+      "concepts": [
+        {"name": "从线到树", "detail": "线性计划只有一条路；ToT 在每步生成多个候选分支，评估后保留最优、剪掉差的。"},
+        {"name": "用 LLM 当评估器", "detail": "每个分支用模型打分，像一个「自我对弈」的搜索过程——这是树式规划的核心机制。"},
+        {"name": "何时才上搜索式规划", "detail": "任务空间大、单次正确率不够、需要探索多种解时才用；「按清单发邮件」这种确定性任务用它纯属烧钱。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "判断：「解一道推理题」和「按清单发邮件」哪个适合树式规划？为什么？",
+      "quiz_topics": ["树/图规划", "分支评估与剪枝", "适用条件"]
+    }
+  ]
+}

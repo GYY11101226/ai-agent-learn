@@ -1,0 +1,69 @@
+{
+  "id": "module-5",
+  "title": "多智能体架构与选型",
+  "weeks": "第10-12周",
+  "prerequisites": "模块4 行动与反思架构",
+  "chapters": [
+    {
+      "id": "5.1",
+      "title": "从单智能体到多智能体：为什么拆",
+      "goal": "理解拆多智能体的真正理由：责任分离与并行，而不是为了「看起来高级」",
+      "diagram": "flowchart LR\n  A[\"单 Agent：一个大脑全包\"] --> B[\"多 Agent：职责拆分\"]\n  B --> C[\"规划/执行/评判分离\"]\n  B --> D[\"互不依赖的子任务并行\"]",
+      "concepts": [
+        {"name": "拆分的两个正当理由", "detail": "责任分离（规划/执行/评判分开、各自专注）和可并行（互不依赖的子任务同时跑）——除此之外多半是过度设计。"},
+        {"name": "不当拆分的代价", "detail": "上下文隔离带来通信成本，简单任务硬拆只会更慢、更贵、更容易出错。"},
+        {"name": "单还是多", "detail": "先问「任务能不能并行、需不需要独立审查」，不能就别拆——架构选型永远从需求出发而非潮流。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "判断「抓数据→写报告」和「三个独立网页分别总结」各适合单还是多智能体，为什么。",
+      "quiz_topics": ["拆分理由", "不当拆分代价", "单/多选型"]
+    },
+    {
+      "id": "5.2",
+      "title": "编排模式：Orchestrator / 层级 / 对等",
+      "goal": "掌握三种主流编排拓扑：Orchestrator-Worker、层级（hierarchical）、对等（peer），能选对拓扑",
+      "diagram": "flowchart TD\n  A[\"主控 Orchestrator\"] --> B[Worker 1]\n  A --> C[Worker 2]\n  A --> D[Worker 3]\n  B --> E[\"汇总结果\"]\n  C --> E\n  D --> E",
+      "animation": "subagent-parallel",
+      "concepts": [
+        {"name": "Orchestrator-Worker", "detail": "一个主控把子任务分发给多个干活的，汇总结果——最常见，也是最该先掌握的拓扑。"},
+        {"name": "层级（hierarchical）", "detail": "上面的上面还有上面，适合复杂任务层层拆解，每个层级只对自己的子任务负责。"},
+        {"name": "对等（peer / 辩论）", "detail": "多个 Agent 平权、各持独立视角相互校验，取更稳的答案——适合需要独立审查或防偏见的场景。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "为一个「多模块代码审查」任务选编排拓扑，并画出拓扑图。",
+      "quiz_topics": ["三种拓扑", "Orchestrator-Worker", "对等辩论"]
+    },
+    {
+      "id": "5.3",
+      "title": "通信与上下文隔离：多 Agent 怎么「说话」",
+      "goal": "理解多 Agent 之间的通信机制：隔离的上下文中如何传递任务与结果，以及共享记忆的作用",
+      "diagram": "flowchart LR\n  A[\"Agent A 独立上下文\"] -->|任务/结果| B[\"Agent B 独立上下文\"]\n  A <--> C[\"共享记忆（白板）\"]\n  B <--> C",
+      "concepts": [
+        {"name": "上下文隔离是前提", "detail": "每个 Agent 有独立上下文、互不污染——好处是专注，坏处是信息不共享，需要一个边界上的通信约定。"},
+        {"name": "通信 = 边界上交换「任务/结果」", "detail": "主控给 worker 一个明确子任务，worker 回一个结构化结果——不要把几十轮对话历史原封不动传回去。"},
+        {"name": "共享记忆（白板）", "detail": "需要跨 Agent 协作时用共享存储（共享记忆 / RAG 库）当白板，让各 Agent 读写同一份中间状态。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "设计 worker 回报给 orchestrator 的消息结构，说明为什么不该把完整对话历史传回去。",
+      "quiz_topics": ["上下文隔离", "通信机制", "共享记忆"]
+    },
+    {
+      "id": "5.4",
+      "title": "架构反模式与选型表",
+      "goal": "识别常见架构翻车点（死循环/上下文爆炸/责任不清），并学会用任务特征选架构",
+      "diagram": "flowchart TD\n  A[\"任务特征\"] --> B{能拆独立子任务?}\n  B -->|否| C[ReAct]\n  B -->|是| D{需分步验证?}\n  D -->|是| E[Plan-and-Execute]\n  B -->|省token| F[ReWOO]\n  B -->|需探索| G[\"ToT 树式\"]\n  B -->|需分工审查| H[多智能体]",
+      "concepts": [
+        {"name": "三大反模式", "detail": "死循环（缺停止判据）、上下文爆炸（无脑塞历史）、责任不清（该拆不拆或乱拆）——根子都在架构没画清。"},
+        {"name": "选型三问", "detail": "任务能拆成独立子任务吗？需要外部分步验证吗？有多少 token/成本预算？三问连答就是架构。"},
+        {"name": "架构是一套决策表", "detail": "简单→ReAct、可拆→Plan-Execute、省 token→ReWOO、需探索→ToT、需分工审查→多智能体——对着任务特征查表选。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "用「选型三问」为三个真实任务各选一个架构，并写清理由。",
+      "quiz_topics": ["三大反模式", "选型三问", "架构决策表"]
+    }
+  ]
+}

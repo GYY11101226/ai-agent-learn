@@ -1,0 +1,69 @@
+{
+  "id": "module-4",
+  "title": "行动与反思架构",
+  "weeks": "第8-9周",
+  "prerequisites": "模块3 决策与工具调用架构",
+  "chapters": [
+    {
+      "id": "4.1",
+      "title": "行动执行层：隔离与副作用治理",
+      "goal": "理解「行动」需要一层安全边界：沙箱隔离 + 权限三态（allow/ask/deny）+ 审计，收敛不可逆操作的副作用",
+      "diagram": "flowchart TD\n  A[模型要执行操作] --> B{命中权限规则?}\n  B -->|allow| C[直接执行]\n  B -->|deny| D[直接拒绝]\n  B -->|未命中| E[弹人确认]\n  C --> F[写审计日志]\n  D --> F\n  E --> F",
+      "animation": "permission-flow",
+      "concepts": [
+        {"name": "执行层隔离", "detail": "代码跑在沙箱/受限环境，避免一次误操作碰毁真实数据——隔离是把「不行」兜进去的第一道墙。"},
+        {"name": "权限三态", "detail": "allow 直接放行、deny 一票否决、其余 ask 弹人确认——三态构成安全边界的最小闭环。"},
+        {"name": "审计日志", "detail": "每次动作记录「谁、何时、干了什么」，出了问题能追溯——是生产级护栏的标配。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "列出 Agent 最危险的三类动作，并分别判断该走 allow/ask/deny 哪一态。",
+      "quiz_topics": ["沙箱隔离", "权限三态", "审计"]
+    },
+    {
+      "id": "4.2",
+      "title": "反思 Critic：自我评估闭环",
+      "goal": "掌握反思环节：让 Agent 执行后自评「对不对/成没成」，输出通过/需修改/重试的判断",
+      "diagram": "flowchart TD\n  A[执行结果] --> B[\"Critic 自评\"]\n  B --> C{通过?}\n  C -->|通过| D[提交]\n  C -->|需修改| E[改局部]\n  C -->|重试| F[\"带错误重来\"]\n  E --> B\n  F --> B",
+      "concepts": [
+        {"name": "反思 = 模型的第二遍审视", "detail": "第一遍执行，第二遍用「评判者」视角做质量检查——把自发产出和自觉把关分开。"},
+        {"name": "三态判断", "detail": "通过（达标）、需修改（改局部）、重试（推倒重来）——把含糊的「感觉不好」变成可执行的指令。"},
+        {"name": "Critic 是独立 prompt", "detail": "用不同的 system prompt 造一个「挑刺者」，避免和干活的同一个模型相互包庇。"}
+      ],
+      "code": "class Verdict(BaseModel):\n    status: Literal['pass', 'revise', 'retry']\n    reason: str\n# Critic 用独立 prompt + 结构化输出强制三态\nresp = client.messages.parse(model=MODEL, max_tokens=1024,\n    messages=[{'role': 'user', 'content': f'任务：{task}\n执行结果：{result}\n判断是否达标。'}],\n    output_format=Verdict)",
+      "todo": "",
+      "exercise": "写一个 Critic 的 system prompt，让它在执行后输出 {pass/revise/retry} + 理由。",
+      "quiz_topics": ["反思闭环", "三态判断", "Critic 独立性"]
+    },
+    {
+      "id": "4.3",
+      "title": "Reflexion：把教训存进记忆、下轮更聪明",
+      "goal": "理解 Reflexion 的价值：失败后沉淀一条「教训」进入记忆，下次同类任务不再犯",
+      "diagram": "flowchart TD\n  A[失败] --> B[\"反思生成教训\"]\n  B --> C[\"存入长期记忆\"]\n  C --> D[\"下次任务开始先读取\"]\n  D --> E[\"避免同类错误\"]",
+      "concepts": [
+        {"name": "教训即经验", "detail": "每次失败后总结「哪里错了、下次怎么避免」，成为可复用的长期经验。"},
+        {"name": "教训进记忆", "detail": "存到长期记忆，下次任务开始时先读取，避免同类错误——这是「从经历中学习」的机制。"},
+        {"name": "与 RAG 的呼应", "detail": "教训本质是一种「经验库」，检索式取回，是上下文工程在执行侧的落地应用。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "给你的 Agent 设计一个 lessons 存储：失败时写什么、下次任务开始时怎么用。",
+      "quiz_topics": ["教训生成", "经验记忆", "与 RAG 关系"]
+    },
+    {
+      "id": "4.4",
+      "title": "自愈循环：执行→检查→修正的闭环工程化",
+      "goal": "把反思+修正固化成一个可复用的自愈循环，让 Agent 从「会失败」变成「会恢复」",
+      "diagram": "flowchart TD\n  A[执行] --> B[检查]\n  B --> C{达标?}\n  C -->|否| D[\"带具体错误重试\"]\n  D --> A\n  C -->|是| E[完成]\n  D --> F{达自愈上限?}\n  F -->|是| G[\"放弃并报告\"]",
+      "concepts": [
+        {"name": "自愈 = 闭环", "detail": "执行→检查→不达标就带具体错误重试，直到达标或达上限——反思环节的工程化固形。"},
+        {"name": "错误要「具体」", "detail": "反馈给模型的不能是「不对」，而是「哪一步、为什么、期望什么」——具体反馈才能被修正。"},
+        {"name": "与 Harness 的关系", "detail": "自愈循环是生产级强约束的重要一环，但必须和成本上限平衡——无限自愈等于烧钱。"}
+      ],
+      "code": "",
+      "todo": "把模块3的 run_agent 加上「执行后检查 + 自愈重试」，并设最大自愈轮数。",
+      "exercise": "解释：为什么自愈反馈里必须带「具体错误」而不是笼统的「再来一次」？",
+      "quiz_topics": ["自愈闭环", "具体错误反馈", "自愈轮数上限"]
+    }
+  ]
+}
