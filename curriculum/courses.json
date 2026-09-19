@@ -52,5 +52,11 @@
     "title": "Agent 架构 从入门到精通",
     "description": "从单一循环的解剖到规划/决策/行动/工具调用各环节的架构设计，再到多智能体编排与选型，边做边学 Agent 内部的运行机制",
     "dir": "agent-architecture"
+  },
+  {
+    "id": "react",
+    "title": "React 从入门到精通",
+    "description": "从组件化与声明式渲染的心智模型，到 State/Hooks/副作用与数据流，再到渲染机制与工程化，边做边学构建交互式前端",
+    "dir": "react"
   }
 ]

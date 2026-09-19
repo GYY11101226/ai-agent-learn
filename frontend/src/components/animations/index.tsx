@@ -19,6 +19,10 @@ import AgenticLoopAnimation from './AgenticLoopAnimation'
 import ToolRoundtripAnimation from './ToolRoundtripAnimation'
 import PermissionFlowAnimation from './PermissionFlowAnimation'
 import SubagentParallelAnimation from './SubagentParallelAnimation'
+import StateRenderAnimation from './StateRenderAnimation'
+import PropsFlowAnimation from './PropsFlowAnimation'
+import EffectTimelineAnimation from './EffectTimelineAnimation'
+import ReconciliationAnimation from './ReconciliationAnimation'
 
 // chapter.animation 枚举 → 动画组件。未注册的值静默不渲染（向后兼容）。
 const ANIMATIONS: Record<string, ComponentType> = {
@@ -42,6 +46,10 @@ const ANIMATIONS: Record<string, ComponentType> = {
   'tool-roundtrip': ToolRoundtripAnimation,
   'permission-flow': PermissionFlowAnimation,
   'subagent-parallel': SubagentParallelAnimation,
+  'state-render': StateRenderAnimation,
+  'props-flow': PropsFlowAnimation,
+  'effect-timeline': EffectTimelineAnimation,
+  reconciliation: ReconciliationAnimation,
 }
 
 export default function AnimationHost({ kind }: { kind: string }) {

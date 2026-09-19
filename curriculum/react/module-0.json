@@ -1,0 +1,68 @@
+{
+  "id": "module-0",
+  "title": "预备：React 心智模型",
+  "weeks": "第1周",
+  "prerequisites": "懂 HTML/CSS/JavaScript 基础，会用命令行",
+  "chapters": [
+    {
+      "id": "0.1",
+      "title": "React 是什么：声明式 UI 与组件化",
+      "goal": "说清 React 解决的痛点：不再手写 DOM 操作，而是「声明界面长什么样」，让 React 负责把它渲染出来",
+      "diagram": "flowchart LR\n  A[\"命令式：手动 createElement/appendChild\"] --> B[\"步骤多、易漏、难维护\"]\n  C[\"声明式：描述 UI 该长什么样\"] --> D[\"React 帮你算 DOM 怎么变\"]",
+      "concepts": [
+        {"name": "命令式 vs 声明式", "detail": "命令式手写每一步 DOM 操作（createElement、appendChild）；声明式只描述「界面应该是什么样」，React 负责把它变成 DOM。"},
+        {"name": "组件化", "detail": "把界面拆成可复用的小组件，每个组件管自己的一块 UI 和逻辑——像搭积木一样拼页面。"},
+        {"name": "React 的定位", "detail": "专注视图层的库，只解决「UI 怎么从数据渲染出来」，路由、状态管理可搭配其它库。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "各举一个「命令式」和「声明式」操作界面的例子（不限于 React），说出声明式好在哪。",
+      "quiz_topics": ["命令式 vs 声明式", "组件化", "React 定位"]
+    },
+    {
+      "id": "0.2",
+      "title": "UI = f(state)：一切的基础",
+      "goal": "记住 React 最核心的心智模型：界面是状态的函数，改状态就会自动重新渲染出对应的界面",
+      "diagram": "flowchart LR\n  A[state] --> B[\"UI = f(state)\"]\n  B --> C[\"把 state 变了 = 界面自动变\"]\n  D[\"不要直接改 DOM\"] --> B",
+      "concepts": [
+        {"name": "UI = f(state)", "detail": "把「状态」喂进组件，输出对应的界面；你要做的只是改状态，渲染交给 React。"},
+        {"name": "单一数据源", "detail": "界面只由状态决定，不再有「DOM 和变量各存一份、对不上」的同步地狱。"},
+        {"name": "生活化类比", "detail": "就像配方的函数：菜谱（组件）+ 食材（state）= 成品（UI），换食材自动换成品，不用手动重做每一步。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "把「一个显示点赞数的按钮」描述成 state 和 UI 的关系：state 是什么，UI 怎么由它决定。",
+      "quiz_topics": ["UI = f(state)", "单一数据源"]
+    },
+    {
+      "id": "0.3",
+      "title": "JSX 初识：像 HTML 的语法糖",
+      "goal": "理解 JSX 不是 HTML 而是 JS，会被编译成 createElement，写出第一个组件",
+      "diagram": "flowchart LR\n  A[\"JSX：<h1>{name}</h1>\"] --> B[\"编译成 React.createElement\"]\n  B --> C[\"渲染成真实 DOM\"]",
+      "concepts": [
+        {"name": "JSX 是 JS 不是 HTML", "detail": "JSX 里用花括号 {} 嵌入 JS 表达式，最终被编译成 createElement 调用。"},
+        {"name": "{} 里只能放表达式", "detail": "花括号里可以放变量、三元、函数调用等表达式，但不能放语句（如 if、for）。"},
+        {"name": "class 要写 className", "detail": "JSX 与 JS 关键字冲突的属性要改名，最经典的就是 class → className。"}
+      ],
+      "code": "function Hello({ name }) {\n  return <h1 className=\"greeting\">Hello, {name}</h1>\n}\n// 等价于：\nReact.createElement('h1', { className: 'greeting' }, 'Hello, ', name)",
+      "todo": "",
+      "exercise": "写出一个接收 title 属性、渲染成 <h2> 的组件，并口头说出它会被编译成什么。",
+      "quiz_topics": ["JSX 本质", "{} 表达式", "className"]
+    },
+    {
+      "id": "0.4",
+      "title": "工程化起步：Vite 与项目结构",
+      "goal": "用 Vite 起一个 React 项目，看懂入口文件、根组件与热更新",
+      "diagram": "flowchart LR\n  A[\"npm create vite\"] --> B[index.html]\n  B --> C[\"main.jsx 挂载\"]\n  C --> D[\"App 根组件\"]\n  D --> E[\"热更新 实时刷新\"]",
+      "concepts": [
+        {"name": "Vite 脚手架", "detail": "用 npm create vite 快速生成项目，自带开发服务器、热更新和构建链，不用自己配 Webpack。"},
+        {"name": "入口与挂载", "detail": "index.html 引入 main.jsx，main.jsx 用 createRoot().render(<App/>) 把根组件挂到 DOM 节点上。"},
+        {"name": "单页应用 SPA", "detail": "只有一个 HTML，视图切换都在 JS 里完成，不刷新整页——这是 React 应用的典型形态。"}
+      ],
+      "code": "// main.jsx\nimport { createRoot } from 'react-dom/client'\nimport App from './App'\ncreateRoot(document.getElementById('root')).render(<App />)",
+      "todo": "用 npm create vite 起一个项目，跑起来后改 App 里的文字，观察热更新即时生效。",
+      "exercise": "画出 Vite 项目从 index.html 到根组件渲染的完整链路。",
+      "quiz_topics": ["Vite 脚手架", "挂载", "SPA"]
+    }
+  ]
+}

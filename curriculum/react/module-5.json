@@ -1,0 +1,69 @@
+{
+  "id": "module-5",
+  "title": "渲染机制与工程化",
+  "weeks": "第10-12周",
+  "prerequisites": "模块4 数据获取与状态管理",
+  "chapters": [
+    {
+      "id": "5.1",
+      "title": "渲染机制：虚拟 DOM 与 Reconciliation",
+      "goal": "理解 React 渲染的底层：状态变化 → 计算新虚拟 DOM → 与旧树 Diff → 最小化更新真实 DOM",
+      "diagram": "flowchart LR\n  A[state 变化] --> B[\"渲染出新虚拟 DOM 树\"]\n  B --> C[\"与旧树 diff 找差异\"]\n  C --> D[\"最小化 patch 真实 DOM\"]",
+      "animation": "reconciliation",
+      "concepts": [
+        {"name": "虚拟 DOM 是什么", "detail": "内存里的一棵普通对象树，描述 UI 结构，比直接操作真实 DOM 快、也更容易做差异计算。"},
+        {"name": "Reconciliation（协调）", "detail": "React 比较新旧两棵虚拟 DOM 树，算出「哪里变了」，只把变化部分更新到真实 DOM。"},
+        {"name": "它为什么快", "detail": "真实 DOM 操作昂贵，先把变化算清楚、再一次性最小化提交，避免逐个手动改 DOM。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "用一句话向同事解释虚拟 DOM + Diff 为什么比「直接改 DOM」更适合复杂界面。",
+      "quiz_topics": ["虚拟 DOM", "Reconciliation", "性能原理"]
+    },
+    {
+      "id": "5.2",
+      "title": "性能优化：memo / useMemo / useCallback",
+      "goal": "掌握三个性能 API 的正确用法：跳过不必要的重渲染和不必要的重计算，且只在真正需要时用",
+      "diagram": "flowchart TD\n  A[\"重渲染触发\"] --> B{props/render 变了?}\n  B -->|没变| C[\"memo 跳过渲染\"]\n  D[\"昂贵计算\"] --> E[\"useMemo 缓存结果\"]\n  F[\"回调引用\"] --> G[\"useCallback 保持稳定\"]",
+      "concepts": [
+        {"name": "React.memo", "detail": "包住子组件，props 浅比较没变就跳过重渲染——适合「纯展示、props 稳定」的子组件。"},
+        {"name": "useMemo 缓存值", "detail": "缓存昂贵计算的结果，依赖不变就复用旧值；别为了「看起来优化」到处套。"},
+        {"name": "useCallback 缓存函数", "detail": "让函数引用在依赖不变时保持稳定，配合 memo 才有意义；单独用它不解决任何问题。"}
+      ],
+      "code": "const Expensive = React.memo(function Expensive({ items }) {\n  return <ul>{items.map(i => <li key={i}>{i}</li>)}</ul>\n})\nconst sorted = useMemo(() => items.toSorted(), [items])\nconst onClick = useCallback(() => setQ(''), [])",
+      "todo": "",
+      "exercise": "构造一个「父组件频繁重渲染但子组件 props 没变」的场景，用 memo 验证子组件跳过了渲染。",
+      "quiz_topics": ["React.memo", "useMemo", "useCallback"]
+    },
+    {
+      "id": "5.3",
+      "title": "路由：React Router 与 SPA 导航",
+      "goal": "掌握用 React Router 实现 SPA 多页面导航：声明路由、动态参数、导航跳转",
+      "diagram": "flowchart LR\n  A[\"/ 首页\"] --> B[\"/users 列表\"]\n  B --> C[\"/users/:id 详情\"]\n  C --> D[\"Link 无刷新跳转\"]",
+      "concepts": [
+        {"name": "路由就是「URL → 组件」的映射", "detail": "用 <Routes><Route path=... element=.../></Routes> 声明哪个路径渲染哪个组件。"},
+        {"name": "动态路由参数", "detail": "path='/users/:id' 里的 :id 可用 useParams() 取到，用于详情页。"},
+        {"name": "无刷新跳转", "detail": "用 <Link> 或 useNavigate() 跳转，只替换视图、不整页刷新，保持 SPA 体验。"}
+      ],
+      "code": "import { Routes, Route, Link, useParams } from 'react-router-dom'\nfunction App() {\n  return <Routes>\n    <Route path='/' element={<Home />} />\n    <Route path='/users/:id' element={<UserDetail />} />\n  </Routes>\n}\nfunction UserDetail() { const { id } = useParams() }",
+      "todo": "",
+      "exercise": "搭一个「列表 → 详情」两个路由的应用，用 useParams 取 id，用 Link 做导航。",
+      "quiz_topics": ["路由映射", "动态参数", "Link 导航"]
+    },
+    {
+      "id": "5.4",
+      "title": "测试与构建：把组件练成生产级",
+      "goal": "了解组件的测试思路（渲染断言 + 交互模拟）与生产构建的基本链路",
+      "diagram": "flowchart TD\n  A[\"组件测试\"] --> B[\"渲染断言输出\"]\n  A --> C[\"模拟交互断言变化\"]\n  D[\"源码\"] --> E[\"npm run build\"]\n  E --> F[\"产物部署\"]",
+      "concepts": [
+        {"name": "组件测试两件事", "detail": "渲染后断言「该有的内容在不在」，模拟点击/输入后断言「状态/界面是否按预期变化」。"},
+        {"name": "测试工具", "detail": "用 Testing Library 以「用户视角」写测试，而不是测内部实现——测行为而非实现细节。"},
+        {"name": "生产构建", "detail": "npm run build 产出压缩、可缓存的静态产物（本项目 frontend/dist），可直接部署。"}
+      ],
+      "code": "import { render, screen, fireEvent } from '@testing-library/react'\ntest('点击按钮计数 +1', () => {\n  render(<Counter />)\n  fireEvent.click(screen.getByText('+1'))\n  expect(screen.getByText('1')).toBeTruthy()\n})",
+      "todo": "",
+      "exercise": "为你的 Counter 组件写一条「点击两次后显示 2」的测试用例思路（伪代码即可）。",
+      "quiz_topics": ["测试两件事", "用户视角测试", "生产构建"]
+    }
+  ]
+}

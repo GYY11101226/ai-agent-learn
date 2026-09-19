@@ -1,0 +1,84 @@
+{
+  "id": "module-2",
+  "title": "State 与事件",
+  "weeks": "第4-5周",
+  "prerequisites": "模块1 组件与 Props",
+  "chapters": [
+    {
+      "id": "2.1",
+      "title": "useState 与不可变更新",
+      "goal": "掌握 useState 存可变状态、用 setState 触发重渲染，理解「不可变更新」为什么必须创建新对象",
+      "diagram": "flowchart LR\n  A[useState] --> B[\"state 初值\"]\n  B --> C[\"setState 更新\"]\n  C --> D[\"触发重新渲染\"]\n  D --> E[\"UI 跟随 state 变化\"]",
+      "animation": "state-render",
+      "concepts": [
+        {"name": "state 是组件私有的可变数据", "detail": "用 useState 声明会变化、且影响渲染的数据；改它要用 setState，React 才会重新渲染。"},
+        {"name": "不可变更新", "detail": "更新对象/数组时创建新副本再 set，而不是原地改——否则 React 可能「看不见」变化、跳过渲染。"},
+        {"name": "函数式更新", "detail": "新值依赖旧值时用 setCount(c => c + 1)，避免闭包读到过期状态。"}
+      ],
+      "code": "const [count, setCount] = useState(0)\nsetCount(count + 1)        // 依赖旧值，有风险\nsetCount(c => c + 1)       // 函数式更新，安全\nconst [list, setList] = useState([])\nsetList(prev => [...prev, '新项'])  // 不可变：新数组而非 push",
+      "todo": "",
+      "exercise": "写一个计数器 + 一个「添加待办」列表，分别演示函数式更新和不可变更新。",
+      "quiz_topics": ["state 声明", "不可变更新", "函数式更新"]
+    },
+    {
+      "id": "2.2",
+      "title": "事件处理与受控组件",
+      "goal": "掌握 onClick/onChange 处理交互，理解「受控组件」：表单值由 state 单一驱动",
+      "diagram": "flowchart LR\n  A[\"input value = state\"] --> B[onChange 改 state]\n  B --> C[\"state 变 → value 变\"]\n  C --> A",
+      "concepts": [
+        {"name": "事件用驼峰命名", "detail": "onClick、onChange、onSubmit，传的是函数引用而非调用结果（不要写 onClick={fn()}）。"},
+        {"name": "受控组件", "detail": "表单元素的 value 绑定到 state、onChange 改 state，输入框的「真实值」永远由 state 决定。"},
+        {"name": "事件对象", "detail": "onChange 的 e.target.value 拿到新输入值，据此 setState。"}
+      ],
+      "code": "const [text, setText] = useState('')\nreturn <input\n  value={text}\n  onChange={e => setText(e.target.value)}\n  placeholder='输入点什么' />",
+      "todo": "",
+      "exercise": "写一个受控输入框，输入时下面实时显示「你输入了：{text}」。",
+      "quiz_topics": ["事件命名", "受控组件", "事件对象"]
+    },
+    {
+      "id": "2.3",
+      "title": "state 快照与批量更新",
+      "goal": "理解 setState 的「异步」本质：一次渲染里 state 是快照，多次 setState 会被批量合并",
+      "diagram": "flowchart TD\n  A[\"多次 setState\"] --> B[\"React 批量合并\"]\n  B --> C[\"一次重渲染\"]\n  C --> D[\"渲染时 state 是那一刻的快照\"]",
+      "concepts": [
+        {"name": "state 是快照", "detail": "一次渲染中 state 固定不变，本次渲染里的所有读取看到的都是同一个旧值。"},
+        {"name": "批量更新", "detail": "同一个事件里多次 setState 不会触发多次渲染，React 会合并成一次更新。"},
+        {"name": "想读最新值用函数式", "detail": "要看上一次更新后的结果，用 setState(fn)，fn 拿到的是基于之前更新计算出来的值。"}
+      ],
+      "code": "// 同一事件里三次 setCount(count+1)，最终只 +1（都基于同一个旧快照）\n// 改用函数式则每次基于最新值，最终 +3\nsetCount(c => c + 1)\nsetCount(c => c + 1)\nsetCount(c => c + 1)",
+      "todo": "",
+      "exercise": "写一个按钮，onClick 里连续调用 setCount 两次，观察并解释为什么只加 1。",
+      "quiz_topics": ["state 快照", "批量更新", "函数式读最新值"]
+    },
+    {
+      "id": "2.4",
+      "title": "状态提升：把 state 放对位置",
+      "goal": "掌握「状态提升」：多个组件要共享同一份 state 时，把它提升到最近的共同父组件",
+      "diagram": "flowchart TD\n  A[\"父组件 持有 state\"] --> B[\"子A 通过 props 读\"]\n  A --> C[\"子B 通过 props 读\"]\n  B -->|回调改 state| A\n  C -->|回调改 state| A",
+      "concepts": [
+        {"name": "为什么提升", "detail": "两个子组件要同步同一份数据时，各自持有会不一致，提升到共同父组件做「单一数据源」。"},
+        {"name": "数据下放、回调上提", "detail": "父组件把 state 作 props 下放给子组件，同时把 setState 包成回调传下去，让子组件能改。"},
+        {"name": "判断 state 归属", "detail": "问「哪几个组件需要共享它」——需要共享的最小公共父组件，就是 state 该待的地方。"}
+      ],
+      "code": "function App() {\n  const [q, setQ] = useState('')\n  return <>\n    <Input value={q} onChange={setQ} />\n    <Display value={q} />\n  </>\n}",
+      "todo": "",
+      "exercise": "写一个「搜索框 + 结果列表」：两个子组件共享 keyword，把 state 提升到父组件。",
+      "quiz_topics": ["状态提升", "回调上提", "state 归属判断"]
+    },
+    {
+      "id": "2.5",
+      "title": "useReducer：集中管理复杂状态",
+      "goal": "理解 useReducer 用「派发动作 + 纯函数归约」管理有多步交互的复杂状态，取代一堆散落的 setState",
+      "diagram": "flowchart LR\n  A[\"dispatch(action)\"] --> B[\"reducer(state, action)\"]\n  B --> C[\"返回新 state\"]\n  C --> D[\"触发渲染\"]",
+      "concepts": [
+        {"name": "reducer 是纯函数", "detail": "接收旧 state 和 action，返回新 state；同样的输入永远同样的输出，逻辑集中、可测试。"},
+        {"name": "action 描述「发生了什么」", "detail": "用 { type, payload } 描述意图，reducer 里用 switch 处理，而不是把逻辑散在各处 setState。"},
+        {"name": "何时用 useReducer", "detail": "状态之间有联动、单次交互要改多个字段、更新逻辑复杂时用；简单一个值用 useState 就够。"}
+      ],
+      "code": "function reducer(count, action) {\n  switch (action.type) {\n    case 'inc': return count + 1\n    case 'dec': return count - 1\n    case 'reset': return 0\n    default: return count\n  }\n}\nconst [count, dispatch] = useReducer(reducer, 0)\ndispatch({ type: 'inc' })",
+      "todo": "",
+      "exercise": "用 useReducer 重写一个「购物车」：支持 add / remove / clear 三种 action。",
+      "quiz_topics": ["reducer 纯函数", "action", "useReducer 适用场景"]
+    }
+  ]
+}

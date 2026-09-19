@@ -1,0 +1,68 @@
+{
+  "id": "module-4",
+  "title": "数据获取与状态管理",
+  "weeks": "第8-9周",
+  "prerequisites": "模块3 副作用与 Hooks",
+  "chapters": [
+    {
+      "id": "4.1",
+      "title": "数据获取：loading / error / success 三态",
+      "goal": "掌握用 useEffect + fetch 拉数据的标准三态模式，处理竞态和失败",
+      "diagram": "flowchart TD\n  A[\"发起请求\"] --> B{状态}\n  B -->|加载中| C[\"loading 态\"]\n  B -->|失败| D[\"error 态 + 重试\"]\n  B -->|成功| E[\"渲染数据\"]",
+      "concepts": [
+        {"name": "三态要齐全", "detail": "数据请求永远有「加载中 / 成功 / 失败」三种状态，UI 要三态都兜住，而不是只写成功路径。"},
+        {"name": "异步在 useEffect 里", "detail": "在 effect 里发起请求、成功后 setState；记得返回清理函数处理「组件卸载时请求才回来」的竞态。"},
+        {"name": "失败要可重试", "detail": "把错误信息展示出来，并给一个「重试」按钮重新触发请求。"}
+      ],
+      "code": "const [data, setData] = useState(null)\nconst [error, setError] = useState(null)\nuseEffect(() => {\n  let active = true\n  fetch('/api/users')\n    .then(r => r.json()).then(d => active && setData(d))\n    .catch(e => active && setError(e))\n  return () => { active = false }\n}, [])",
+      "todo": "",
+      "exercise": "写一个 fetch 用户列表的组件，完整实现 loading / error / success 三态和一个重试按钮。",
+      "quiz_topics": ["三态模式", "竞态处理", "重试"]
+    },
+    {
+      "id": "4.2",
+      "title": "派生状态：能算出来的就别存",
+      "goal": "识别「派生状态」：能从已有 state/props 算出的值不该单独存，避免多份状态不同步",
+      "diagram": "flowchart LR\n  A[\"已有 state/props\"] --> B[\"渲染时直接计算\"]\n  B --> C[\"派生值 无需另存\"]\n  D[\"另存一份 → 易不同步\"] -.->|反模式| C",
+      "concepts": [
+        {"name": "什么是派生状态", "detail": "列表长度、筛选结果、格式化后的文本等，都能从源数据直接算出，就不该再 useState 存一份。"},
+        {"name": "存两份的代价", "detail": "源和副本要手动同步，一旦漏同步就会出现「数据和界面对不上」的经典 bug。"},
+        {"name": "价格昂贵时用 useMemo", "detail": "计算确实很耗时、依赖又不常变时，用 useMemo 缓存结果，避免每次渲染重复算。"}
+      ],
+      "code": "// 正例：派生值直接算，不另存 state\nconst doneCount = items.filter(i => i.done).length\n// 计算昂贵且依赖不常变时，用 useMemo 缓存\nconst expensive = useMemo(() => heavyCompute(items), [items])",
+      "todo": "",
+      "exercise": "找出你现在代码里一个「可以算出来却额外存了 state」的地方，改成派生值。",
+      "quiz_topics": ["派生状态", "多份状态同步", "useMemo 缓存"]
+    },
+    {
+      "id": "4.3",
+      "title": "状态管理选型：Context / 全局库的边界",
+      "goal": "理解状态管理工具的选择边界：局部用 useState、跨层用 Context、复杂全局再上库，不盲目引入大杀器",
+      "diagram": "flowchart TD\n  A[\"局部状态\"] --> B[\"useState 就够\"]\n  C[\"跨层共享\"] --> D[\"Context\"]\n  E[\"复杂全局/高频更新\"] --> F[\"再考虑全局库\"]\n  G[\"能简单就别复杂\"] --> B",
+      "concepts": [
+        {"name": "按需升级", "detail": "多数状态用 useState 就能解决；只有真正跨层、复杂的共享才考虑 Context 或 Zustand/Redux 等库。"},
+        {"name": "库是双刃剑", "detail": "全局状态库带来统一范式，也带来模板代码和学习成本——没到那个复杂度时是负担。"},
+        {"name": "判断标准", "detail": "问「有多少组件共享、更新多频繁、逻辑多复杂」——简单场景过早引入库是过度设计。"}
+      ],
+      "code": "",
+      "todo": "",
+      "exercise": "为一个「若干页面共享登录态 + 购物车」的应用，说明哪些状态各自该用哪种方案，理由是什么。",
+      "quiz_topics": ["状态管理选型", "何时用库", "按需升级"]
+    },
+    {
+      "id": "4.4",
+      "title": "表单与校验",
+      "goal": "掌握受控表单的提交、多字段管理和校验反馈，写出可用且有反馈的表单",
+      "diagram": "flowchart TD\n  A[\"受控输入多个字段\"] --> B[提交]\n  B --> C[校验]\n  C --> D{通过?}\n  D -->|否| E[\"字段级错误反馈\"]\n  D -->|是| F[提交处理]",
+      "concepts": [
+        {"name": "多字段统一管理", "detail": "用一个对象 state 存多个字段，或逐个 useState；字段多时可考虑 useReducer 集中管理。"},
+        {"name": "校验要有反馈", "detail": "校验错误要显示在对应字段旁，阻止提交的同时告诉用户哪里错了、怎么改。"},
+        {"name": "受控的一致性", "detail": "每个 input 的 value 都绑定到 state 的一个字段，onChange 精确更新该字段。"}
+      ],
+      "code": "const [form, setForm] = useState({ name: '', email: '' })\nconst [errors, setErrors] = useState({})\nfunction submit() {\n  const e = {}\n  if (!form.name) e.name = '姓名必填'\n  if (!form.email.includes('@')) e.email = '邮箱格式不对'\n  setErrors(e)\n  if (Object.keys(e).length === 0) doSubmit(form)\n}",
+      "todo": "",
+      "exercise": "写一个「姓名 + 邮箱」的表单，带必填和邮箱格式校验与错误提示。",
+      "quiz_topics": ["多字段管理", "校验反馈", "受控表单"]
+    }
+  ]
+}

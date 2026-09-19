@@ -1,0 +1,84 @@
+{
+  "id": "module-3",
+  "title": "副作用与 Hooks",
+  "weeks": "第6-7周",
+  "prerequisites": "模块2 State 与事件",
+  "chapters": [
+    {
+      "id": "3.1",
+      "title": "useEffect 的职责：同步到外部系统",
+      "goal": "理解 useEffect 处理「渲染之外」的事：数据获取、订阅、操作 DOM，而不是「组件更新后跑一段代码」的万能钩子",
+      "diagram": "flowchart LR\n  A[\"组件渲染\"] --> B[\"useEffect 运行\"]\n  B --> C[\"同步到外部：请求/订阅/DOM\"]",
+      "animation": "effect-timeline",
+      "concepts": [
+        {"name": "副作用是什么", "detail": "凡是会影响到「组件之外」的操作——发请求、记日志、改全局、操作真实 DOM——都算副作用，交给 useEffect。"},
+        {"name": "渲染要纯", "detail": "渲染本身应该是纯函数（同样的 state 同样的 UI），副作用不该在渲染过程中执行。"},
+        {"name": "默认在渲染后运行", "detail": "useEffect 的回调在界面提交、DOM 就位后才跑，保证不阻塞首屏。"}
+      ],
+      "code": "useEffect(() => {\n  document.title = `你有 ${count} 条未读`\n}, [count])",
+      "todo": "",
+      "exercise": "用 useEffect 实现：页面标题实时显示输入框里的字数。",
+      "quiz_topics": ["副作用定义", "渲染要纯", "运行时机"]
+    },
+    {
+      "id": "3.2",
+      "title": "依赖数组与清理函数",
+      "goal": "掌握依赖数组控制「何时重跑 effect」，用清理函数卸载订阅、避免内存泄漏",
+      "diagram": "flowchart TD\n  A[\"依赖没变 → 不重跑\"] --> D\n  B[\"依赖变了 → 先清理再重跑\"] --> D\n  C[\"卸载组件 → 执行清理\"] --> D[\"避免泄漏\"]",
+      "concepts": [
+        {"name": "依赖数组是触发条件", "detail": "[] 只在挂载跑一次；[a, b] 在 a/b 变化时重跑；不传则每次渲染都跑——要如实列出所有用到的值。"},
+        {"name": "清理函数", "detail": "effect 里 return 一个函数，它在「下一次运行前」和「组件卸载时」被调用，用来取消订阅、清定时器。"},
+        {"name": "别漏依赖", "detail": "effect 里用到外部变量却不写进依赖，会读到过期值或逻辑错位——这是最常见的坑。"}
+      ],
+      "code": "useEffect(() => {\n  const timer = setInterval(() => console.log('tick'), 1000)\n  return () => clearInterval(timer)  // 清理：卸载时停掉定时器\n}, [])",
+      "todo": "",
+      "exercise": "写一个挂载时订阅事件、卸载时取消订阅的 useEffect，并说明不加清理会有什么后果。",
+      "quiz_topics": ["依赖数组", "清理函数", "漏依赖"]
+    },
+    {
+      "id": "3.3",
+      "title": "自定义 Hook：复用状态逻辑",
+      "goal": "掌握把「状态 + 副作用」抽成自定义 Hook，在多个组件间复用逻辑而非复制代码",
+      "diagram": "flowchart LR\n  A[\"useXxx() 自定义 Hook\"] --> B[\"内含 state + effect\"]\n  B --> C[\"多个组件各自调用\"]\n  C --> D[\"逻辑复用、状态独立\"]",
+      "concepts": [
+        {"name": "Hook 就是函数", "detail": "以 use 开头的普通函数，内部可以用其它 Hook，把一组相关逻辑封装起来。"},
+        {"name": "复用的是逻辑不是状态", "detail": "每个调用 useXxx 的组件都拿到独立的 state——逻辑复用了，状态互不干扰。"},
+        {"name": "命名规范", "detail": "必须以 use 开头，否则 React 无法识别、lint 规则也会报错。"}
+      ],
+      "code": "function useOnline() {\n  const [online, setOnline] = useState(navigator.onLine)\n  useEffect(() => {\n    const update = () => setOnline(navigator.onLine)\n    window.addEventListener('online', update)\n    window.addEventListener('offline', update)\n    return () => { window.removeEventListener('online', update)\n      window.removeEventListener('offline', update) }\n  }, [])\n  return online\n}",
+      "todo": "",
+      "exercise": "写一个 useLocalStorage(key, 初值) 自定义 Hook，让状态自动和 localStorage 同步。",
+      "quiz_topics": ["自定义 Hook", "逻辑复用 vs 状态", "命名规范"]
+    },
+    {
+      "id": "3.4",
+      "title": "useContext：跨层级传递数据",
+      "goal": "理解 Context 解决「props 逐层传递」的痛点，用 Provider 注入、useContext 读取",
+      "diagram": "flowchart LR\n  A[\"Provider 提供值\"] --> B[\"任意深层组件\"]\n  B --> C[\"useContext 直接读取\"]\n  D[\"不用层层 props 下传\"]",
+      "concepts": [
+        {"name": "解决 props drilling", "detail": "数据要从顶层传到深层时，中间组件被迫转发用不到的 props——Context 让它一步到位。"},
+        {"name": "Provider 与消费者", "detail": "在树上层用 <Xxx.Provider value={...}> 注入，任意后代用 useContext(Xxx) 读取。"},
+        {"name": "别滥用", "detail": "Context 适合主题、登录态等「跨层的全局数据」；组件局部的数据仍应走 props。"}
+      ],
+      "code": "const ThemeCtx = createContext('light')\nfunction App() {\n  return <ThemeCtx.Provider value='dark'><Toolbar /></ThemeCtx.Provider>\n}\nfunction Toolbar() {\n  const theme = useContext(ThemeCtx)\n  return <div>当前主题：{theme}</div>\n}",
+      "todo": "",
+      "exercise": "用 Context 实现一个全局主题（light/dark），让任意深层组件能读到当前主题。",
+      "quiz_topics": ["props drilling", "Provider/useContext", "适用边界"]
+    },
+    {
+      "id": "3.5",
+      "title": "useRef：存不被渲染重置的值",
+      "goal": "理解 useRef 存「可变但不触发渲染」的值，以及拿真实 DOM 节点",
+      "diagram": "flowchart LR\n  A[\"useRef(初值)\"] --> B[\".current 可变可读\"]\n  B --> C[\"改它不触发渲染\"]\n  B --> D[\"ref 绑到 DOM 拿节点\"]",
+      "concepts": [
+        {"name": "和 state 的区别", "detail": "state 变了会重渲染；ref 的 .current 改了不会重渲染——适合存计时器 id、上一次的值、DOM 引用。"},
+        {"name": "跨越渲染保持稳定", "detail": "同一个 ref 对象在多次渲染间是同一个引用，不会被重置。"},
+        {"name": "ref 拿 DOM", "detail": "把 ref 传到 JSX 的 ref 属性，渲染后 ref.current 就是那个真实 DOM 节点，可用来聚焦、测尺寸。"}
+      ],
+      "code": "const inputRef = useRef(null)\nfunction focus() { inputRef.current.focus() }\nreturn <><input ref={inputRef} /><button onClick={focus}>聚焦</button></>",
+      "todo": "",
+      "exercise": "写一个「点击按钮让输入框聚焦」，再用 useRef 记录组件渲染了多少次（不触发额外渲染）。",
+      "quiz_topics": ["ref vs state", "跨渲染稳定", "ref 拿 DOM"]
+    }
+  ]
+}
